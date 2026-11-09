@@ -4,16 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{TITEL}}</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<meta name="theme-color" content="{{FARBE}}">
 <style>
-  :root { --akzent: {{FARBE}}; --text: #1b1f24; --leise: #5b6470; --linie: #e3e6ea; --flaeche: #f6f7f9; }
+  :root { --akzent: {{FARBE}}; --text: #1c2622; --leise: #5a6661; --linie: #e1e7e4; --flaeche: #f3f7f5; }
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: #fff; }
-  header { background: var(--akzent); color: #fff; padding: 32px 20px 28px; }
-  header .verein { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
-  header h1 { margin: 4px 0 6px; font-size: 30px; }
+  header { background: var(--akzent); color: #fff; }
+  .kopf { max-width: 880px; margin: 0 auto; padding: 28px 20px 26px; display: flex; align-items: center; gap: 22px; }
+  .logo { flex: none; width: 92px; height: 92px; border-radius: 50%; background: #fff; color: var(--akzent); display: grid; place-items: center; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .logo svg { width: 78px; height: 78px; }
+  header .verein { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; font-weight: 600; }
+  header h1 { margin: 2px 0 6px; font-size: 32px; letter-spacing: -.01em; }
   header p { margin: 0; max-width: 560px; opacity: .92; }
+  .band { height: 6px; background: repeating-linear-gradient(90deg, #fff 0 24px, transparent 24px 48px); opacity: .18; }
+  @media (max-width: 640px) { .kopf { gap: 14px; padding: 20px 16px; } .logo { width: 64px; height: 64px; } .logo svg { width: 54px; height: 54px; } header h1 { font-size: 24px; } header p { font-size: 14px; } }
   main { max-width: 880px; margin: 0 auto; padding: 8px 20px 48px; }
-  h2 { font-size: 20px; margin: 32px 0 12px; }
+  h2 { font-size: 20px; margin: 32px 0 12px; color: var(--akzent); }
   .hinweis { color: var(--leise); font-size: 14px; margin: -4px 0 16px; }
   .feeds { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
   .feed { border: 1px solid var(--linie); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -69,42 +76,30 @@
   #tagesliste h3 { font-size: 16px; margin: 0 0 4px; }
   .termin .farbe { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--f); margin-right: 6px; }
   @media (max-width: 640px) {
+    .knopf { padding: 6px 9px; font-size: 13px; }
     .zelle { min-height: 52px; align-items: center; }
     .ev, .mehr { display: none; }
     .punkte { display: flex; }
     .monatsname { min-width: 0; flex: 1; font-size: 16px; }
   }
+  .fusslogo { color: var(--akzent); width: 40px; height: 40px; margin: 0 auto 8px; }
+  .fusslogo svg { width: 40px; height: 40px; }
   footer { color: var(--leise); font-size: 13px; text-align: center; padding: 24px; border-top: 1px solid var(--linie); }
   .leer { color: var(--leise); padding: 12px 0; }
 </style>
 </head>
 <body>
 <header>
-  <div class="verein">{{VEREIN}}</div>
-  <h1>{{KOPF}}</h1>
-  <p>{{UNTERTITEL}}</p>
+  <div class="kopf">
+    <div class="logo" aria-hidden="true">{{LOGO}}</div>
+    <div>
+      <div class="verein">{{VEREIN}}</div>
+      <h1>{{KOPF}}</h1>
+      <p>{{UNTERTITEL}} <a href="#abo" style="color:#fff;font-weight:600">Kalender abonnieren ↓</a></p>
+    </div>
+  </div>
 </header>
 <main>
-  <h2>Kalender abonnieren</h2>
-  <p class="hinweis">Einmal abonnieren – neue und geänderte Termine erscheinen automatisch in deinem Handy- oder PC-Kalender.</p>
-  <div class="feeds" id="feeds"></div>
-
-  <details>
-    <summary>So klappt das Abo auf Android</summary>
-    <ol>
-      <li>Bei „Link kopieren“ die Adresse des gewünschten Kalenders kopieren.</li>
-      <li>Im Browser <a href="https://calendar.google.com/calendar/r/settings/addbyurl" target="_blank" rel="noopener">calendar.google.com → Kalender per URL hinzufügen</a> öffnen und die Adresse einfügen.</li>
-      <li>Nach kurzer Zeit erscheint der Kalender automatisch in der Google-Kalender-App. Alternativ geht es direkt auf dem Handy mit der kostenlosen App ICSx⁵.</li>
-    </ol>
-  </details>
-  <details>
-    <summary>So klappt das Abo in Outlook</summary>
-    <ol>
-      <li>Adresse über „Link kopieren“ kopieren.</li>
-      <li>In Outlook: Kalender hinzufügen → „Aus dem Internet abonnieren“ und die Adresse einfügen.</li>
-    </ol>
-  </details>
-
   <div class="kopfzeile">
     <h2>Termine</h2>
     <div class="umschalter" role="tablist">
@@ -130,8 +125,29 @@
     <h2>Regelmäßige Termine</h2>
     <div id="regel"></div>
   </section>
+
+  <h2 id="abo">Kalender abonnieren</h2>
+  <p class="hinweis">Einmal abonnieren – neue und geänderte Termine erscheinen automatisch in deinem Handy- oder PC-Kalender.</p>
+  <div class="feeds" id="feeds"></div>
+
+  <details>
+    <summary>So klappt das Abo auf Android</summary>
+    <ol>
+      <li>Bei „Link kopieren“ die Adresse des gewünschten Kalenders kopieren.</li>
+      <li>Im Browser <a href="https://calendar.google.com/calendar/r/settings/addbyurl" target="_blank" rel="noopener">calendar.google.com → Kalender per URL hinzufügen</a> öffnen und die Adresse einfügen.</li>
+      <li>Nach kurzer Zeit erscheint der Kalender automatisch in der Google-Kalender-App. Alternativ geht es direkt auf dem Handy mit der kostenlosen App ICSx⁵.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>So klappt das Abo in Outlook</summary>
+    <ol>
+      <li>Adresse über „Link kopieren“ kopieren.</li>
+      <li>In Outlook: Kalender hinzufügen → „Aus dem Internet abonnieren“ und die Adresse einfügen.</li>
+    </ol>
+  </details>
+
 </main>
-<footer>{{VEREIN}} · Termine werden automatisch aktualisiert</footer>
+<footer><div class="fusslogo" aria-hidden="true">{{LOGO}}</div>{{VEREIN}} · Termine werden automatisch aktualisiert</footer>
 
 <script src="qrcode.js"></script>
 <script>
@@ -195,8 +211,8 @@ document.getElementById('filter').addEventListener('click', e => {
   monatZeichnen();
 });
 
-const FARBEN = ['#1d4f91', '#2e8b57', '#c0622b', '#8e44ad', '#b03a48', '#1f8a8a', '#7a6a1f'];
-const farbe = a => FARBEN[Math.max(0, DATEN.abteilungen.indexOf(a)) % FARBEN.length];
+const FARBEN = ['#26684C', '#2E7DAF', '#C8892B', '#7A5BA6', '#B5484F', '#1F8A8A', '#6F7A2B'];
+const farbe = a => (DATEN.farben || {})[a] || FARBEN[Math.max(0, DATEN.abteilungen.indexOf(a)) % FARBEN.length];
 const passt = t => auswahl === 'Alle' || t.abteilung === auswahl || t.abteilung === 'Hauptverein';
 const marken = t => [t.abteilung, t.mannschaft].filter(Boolean).map(m => `<span class="marke">${esc(m)}</span>`).join('');
 

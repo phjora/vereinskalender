@@ -523,13 +523,23 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
              for t in oeff for s in vorkommen(t, heute - timedelta(days=62), heute + timedelta(days=400))),
             key=lambda d: d["start"]),
     }
+    daten["farben"] = cfg.get("abteilungsfarben", {})
+    logo_datei = Path(__file__).parent / "logo.svg"
+    logo_svg = logo_datei.read_text(encoding="utf-8") if logo_datei.exists() else ""
+    if logo_svg:  # Favicon in Vereinsfarbe
+        (OUT / "logo.svg").write_text(logo_svg.replace("currentColor", v.get("farbe", "#26684C"))
+                                      .replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+                                      if 'xmlns="http' not in logo_svg[:300] else
+                                      logo_svg.replace("currentColor", v.get("farbe", "#26684C")),
+                                      encoding="utf-8")
     vorlage = (Path(__file__).parent / "website.html").read_text(encoding="utf-8")
     seite = (vorlage
              .replace("{{TITEL}}", html.escape(f"{w['titel']} · {v['kurzname']}"))
              .replace("{{KOPF}}", html.escape(w["titel"]))
              .replace("{{VEREIN}}", html.escape(v["name"]))
              .replace("{{UNTERTITEL}}", html.escape(w["untertitel"]))
-             .replace("{{FARBE}}", v.get("farbe", "#1d4f91"))
+             .replace("{{FARBE}}", v.get("farbe", "#26684C"))
+             .replace("{{LOGO}}", logo_svg)
              .replace("{{DATEN}}", json.dumps(daten, ensure_ascii=False).replace("</", "<\\/")))
     (OUT / "index.html").write_text(seite, encoding="utf-8")
     # QR-Code-Bibliothek (qrcode-generator, MIT-Lizenz) lokal mitliefern

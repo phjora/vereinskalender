@@ -7,10 +7,16 @@ name = "TSV München-Großhadern"
 kurzname = "TSV Großhadern"
 slug = "tsv-grosshadern"            # wird für eindeutige Termin-IDs genutzt
 zeitzone = "Europe/Berlin"
-farbe = "#1d4f91"                    # Akzentfarbe der Website – Vereinsfarbe eintragen
+farbe = "#26684C"                    # TSV-Grün aus dem Vereinslogo
 # Öffentliche Basisadresse, unter der die Dateien liegen (ohne / am Ende).
 # Lokal leer lassen; im GitHub-Workflow wird sie automatisch gesetzt.
 basis_url = ""
+
+# Farben der Abteilungen im Monatskalender (nicht aufgeführte bekommen eine Ersatzfarbe)
+[abteilungsfarben]
+Hauptverein = "#26684C"
+"Fußball" = "#2E7DAF"
+Judo = "#C8892B"
 
 [website]
 titel = "Vereinskalender"
