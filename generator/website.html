@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITEL}}</title>
+<style>
+  :root { --akzent: {{FARBE}}; --text: #1b1f24; --leise: #5b6470; --linie: #e3e6ea; --flaeche: #f6f7f9; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: #fff; }
+  header { background: var(--akzent); color: #fff; padding: 32px 20px 28px; }
+  header .verein { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+  header h1 { margin: 4px 0 6px; font-size: 30px; }
+  header p { margin: 0; max-width: 560px; opacity: .92; }
+  main { max-width: 880px; margin: 0 auto; padding: 8px 20px 48px; }
+  h2 { font-size: 20px; margin: 32px 0 12px; }
+  .hinweis { color: var(--leise); font-size: 14px; margin: -4px 0 16px; }
+  .feeds { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+  .feed { border: 1px solid var(--linie); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .feed h3 { margin: 0; font-size: 16px; }
+  .feed p { margin: 0; color: var(--leise); font-size: 14px; flex: 1; }
+  .knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
+  .knopf { border: 1px solid var(--akzent); background: var(--akzent); color: #fff; border-radius: 8px; padding: 7px 12px; font-size: 14px; text-decoration: none; cursor: pointer; font-family: inherit; }
+  .knopf.zweit { background: #fff; color: var(--akzent); }
+  .qr { display: none; padding-top: 4px; text-align: center; }
+  .qr.offen { display: block; }
+  .qr img { width: 168px; height: 168px; image-rendering: pixelated; }
+  .qr small { display: block; color: var(--leise); word-break: break-all; font-size: 12px; }
+  .filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--linie); background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 14px; cursor: pointer; font-family: inherit; color: var(--text); }
+  .chip.aktiv { background: var(--akzent); border-color: var(--akzent); color: #fff; }
+  .termin { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--linie); }
+  .datum { text-align: center; background: var(--flaeche); border-radius: 10px; padding: 6px 0; }
+  .datum .tag { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .datum .rest { font-size: 12px; color: var(--leise); }
+  .termin h4 { margin: 0 0 2px; font-size: 16px; }
+  .termin .meta { color: var(--leise); font-size: 14px; }
+  .marke { display: inline-block; font-size: 12px; border-radius: 6px; padding: 1px 7px; margin-right: 6px; background: var(--flaeche); color: var(--leise); }
+  details { border: 1px solid var(--linie); border-radius: 12px; padding: 12px 16px; margin-top: 8px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details ol { padding-left: 20px; margin: 10px 0 4px; }
+  footer { color: var(--leise); font-size: 13px; text-align: center; padding: 24px; border-top: 1px solid var(--linie); }
+  .leer { color: var(--leise); padding: 12px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="verein">{{VEREIN}}</div>
+  <h1>{{KOPF}}</h1>
+  <p>{{UNTERTITEL}}</p>
+</header>
+<main>
+  <h2>Kalender abonnieren</h2>
+  <p class="hinweis">Einmal abonnieren – neue und geänderte Termine erscheinen automatisch in deinem Handy- oder PC-Kalender.</p>
+  <div class="feeds" id="feeds"></div>
+
+  <details>
+    <summary>So klappt das Abo auf Android</summary>
+    <ol>
+      <li>Bei „Link kopieren“ die Adresse des gewünschten Kalenders kopieren.</li>
+      <li>Im Browser <a href="https://calendar.google.com/calendar/r/settings/addbyurl" target="_blank" rel="noopener">calendar.google.com → Kalender per URL hinzufügen</a> öffnen und die Adresse einfügen.</li>
+      <li>Nach kurzer Zeit erscheint der Kalender automatisch in der Google-Kalender-App. Alternativ geht es direkt auf dem Handy mit der kostenlosen App ICSx⁵.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>So klappt das Abo in Outlook</summary>
+    <ol>
+      <li>Adresse über „Link kopieren“ kopieren.</li>
+      <li>In Outlook: Kalender hinzufügen → „Aus dem Internet abonnieren“ und die Adresse einfügen.</li>
+    </ol>
+  </details>
+
+  <h2>Nächste Termine</h2>
+  <div class="filter" id="filter"></div>
+  <div id="liste"></div>
+
+  <h2>Regelmäßige Termine</h2>
+  <div id="regel"></div>
+</main>
+<footer>{{VEREIN}} · Termine werden automatisch aktualisiert</footer>
+
+<script src="qrcode.js"></script>
+<script>
+const DATEN = {{DATEN}};
+const MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+const TAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+const basis = DATEN.basis || new URL('.', location.href).href.replace(/\/$/, '');
+const httpsUrl = p => basis + '/' + p;
+const webcalUrl = p => httpsUrl(p).replace(/^https?:\/\//, 'webcal://');
+
+function feedsZeichnen() {
+  const box = document.getElementById('feeds');
+  box.innerHTML = DATEN.feeds.map(f => `
+    <div class="feed">
+      <h3>${esc(f.name.replace(/^.*? – /, ''))}</h3>
+      <p>${esc(f.beschreibung)}</p>
+      <div class="knoepfe">
+        <a class="knopf" href="${esc(webcalUrl(f.pfad))}">Abonnieren</a>
+        <a class="knopf zweit" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl(f.pfad))}">Google</a>
+        <button class="knopf zweit" data-kopie="${esc(httpsUrl(f.pfad))}">Link kopieren</button>
+        <button class="knopf zweit" data-qr="${esc(f.id)}">QR</button>
+      </div>
+      <div class="qr" id="qr-${esc(f.id)}"><small>${esc(httpsUrl(f.pfad))}</small></div>
+    </div>`).join('');
+  box.addEventListener('click', e => {
+    const k = e.target.closest('[data-kopie]');
+    if (k) {
+      const fertig = () => { const alt = k.textContent; k.textContent = 'Kopiert ✓'; setTimeout(() => k.textContent = alt, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(k.dataset.kopie).then(fertig, () => prompt('Link kopieren:', k.dataset.kopie));
+      else prompt('Link kopieren:', k.dataset.kopie);
+    }
+    const q = e.target.closest('[data-qr]');
+    if (q) {
+      const f = DATEN.feeds.find(x => x.id === q.dataset.qr);
+      const ziel = document.getElementById('qr-' + f.id);
+      if (!ziel.querySelector('img') && window.qrcode) {
+        const code = qrcode(0, 'M');
+        code.addData(webcalUrl(f.pfad));
+        code.make();
+        ziel.insertAdjacentHTML('afterbegin', code.createImgTag(6, 8));
+      }
+      ziel.classList.toggle('offen');
+    }
+  });
+}
+
+let auswahl = 'Alle';
+function filterZeichnen() {
+  const optionen = ['Alle', ...DATEN.abteilungen];
+  document.getElementById('filter').innerHTML = optionen.map(o =>
+    `<button class="chip ${o === auswahl ? 'aktiv' : ''}" data-a="${esc(o)}">${esc(o)}</button>`).join('');
+}
+document.getElementById('filter').addEventListener('click', e => {
+  const b = e.target.closest('[data-a]');
+  if (!b) return;
+  auswahl = b.dataset.a;
+  filterZeichnen();
+  listeZeichnen();
+});
+
+const passt = t => auswahl === 'Alle' || t.abteilung === auswahl || t.abteilung === 'Hauptverein';
+const marken = t => [t.abteilung, t.mannschaft].filter(Boolean).map(m => `<span class="marke">${esc(m)}</span>`).join('');
+
+function listeZeichnen() {
+  const liste = DATEN.termine.filter(passt);
+  document.getElementById('liste').innerHTML = liste.length ? liste.map(t => {
+    const d = new Date(t.start.length === 10 ? t.start + 'T00:00:00' : t.start);
+    const zeit = t.ganztaegig ? 'ganztägig' : d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}) + ' Uhr';
+    return `<div class="termin">
+      <div class="datum"><div class="tag">${d.getDate()}</div><div class="rest">${TAGE[d.getDay()]} · ${MONATE[d.getMonth()]}</div></div>
+      <div><h4>${esc(t.titel)}</h4>
+        <div class="meta">${zeit}${t.ort ? ' · ' + esc(t.ort) : ''}</div>
+        <div class="meta">${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div>
+    </div>`;
+  }).join('') : '<div class="leer">Keine Termine in den nächsten Wochen.</div>';
+
+  const regel = DATEN.regelmaessig.filter(passt);
+  document.getElementById('regel').innerHTML = regel.length ? regel.map(t => `
+    <div class="termin"><div class="datum"><div class="rest">regel-</div><div class="rest">mäßig</div></div>
+      <div><h4>${esc(t.titel)}</h4><div class="meta">${esc(t.regel)}${t.ort ? ' · ' + esc(t.ort) : ''}</div>
+      <div class="meta">${marken(t)}</div></div></div>`).join('') : '<div class="leer">Keine regelmäßigen Termine.</div>';
+}
+
+feedsZeichnen();
+filterZeichnen();
+listeZeichnen();
+</script>
+</body>
+</html>

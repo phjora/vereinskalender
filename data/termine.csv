@@ -1,0 +1,13 @@
+id,titel,start,ende,ganztaegig,wiederholung,ort,abteilung,kategorie,mannschaft,sichtbarkeit,beschreibung,notiz_intern
+vs-2026-11-10,Vorstandssitzung,2026-11-10 19:00,2026-11-10 21:00,nein,,Vereinsheim,Hauptverein,Gremium,,vorstand,Beispieltermin,Kalender-Pitch
+as-2026-11-17,Ausschusssitzung,2026-11-17 19:30,2026-11-17 21:30,nein,,Vereinsheim,Hauptverein,Gremium,,intern,Beispieltermin,
+js-2026-11-24,Jugendausschuss Fußball,2026-11-24 19:00,2026-11-24 20:30,nein,,Vereinsheim,Fußball,Gremium,,intern,Beispieltermin,
+u9-training,Training U9,2026-11-11 16:30,2026-11-11 18:00,nein,FREQ=WEEKLY;BYDAY=WE;UNTIL=20261216T230000Z,Vereinsgelände,Fußball,Training,U9,oeffentlich,Beispieltermin – wöchentlich,
+u17-training,Training U17,2026-11-10 18:00,2026-11-10 19:30,nein,"FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=20261217T230000Z",Vereinsgelände,Fußball,Training,U17,oeffentlich,Beispieltermin – dienstags und donnerstags,
+u9-festival-1114,U9-Festival,2026-11-14 10:00,2026-11-14 13:00,nein,,Auswärts,Fußball,Jugend,U9,oeffentlich,Beispieltermin – Treffpunkt 9:15 Uhr am Vereinsgelände,
+u17-spiel-1115,U17 Punktspiel (Beispiel),2026-11-15 11:00,2026-11-15 12:45,nein,,Vereinsgelände,Fußball,Spiel,U17,oeffentlich,Beispieltermin – kommt später automatisch vom BFV,
+u17-elternabend,Elternabend U17,2026-11-19 19:00,2026-11-19 20:30,nein,,Vereinsheim,Fußball,Jugend,U17,oeffentlich,Beispieltermin,
+judo-pruefung,Gürtelprüfung Judo,2026-11-21 10:00,2026-11-21 13:00,nein,,Judohalle,Judo,Prüfung,,oeffentlich,Beispieltermin,
+jugend-weihnachtsfeier,Weihnachtsfeier Fußballjugend,2026-11-28 15:00,2026-11-28 18:00,nein,,Vereinsheim,Fußball,Jugend,,oeffentlich,Beispieltermin,
+hallenturnier-u9,Hallenturnier U9,2026-12-05,2026-12-05,ja,,Turnhalle,Fußball,Jugend,U9,oeffentlich,Beispieltermin,
+weihnachtsfeier-verein,Weihnachtsfeier des Vereins,2026-12-12 18:00,2026-12-12 22:00,nein,,Vereinsheim,Hauptverein,Veranstaltung,,oeffentlich,Beispieltermin – alle Abteilungen,

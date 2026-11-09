@@ -1,0 +1,108 @@
+# Vereinskalender – Konfiguration
+# Alles Vereinsspezifische steht hier. Für einen anderen Verein reicht eine
+# neue Konfiguration und eine neue Termintabelle, der Code bleibt gleich.
+
+[verein]
+name = "TSV München-Großhadern"
+kurzname = "TSV Großhadern"
+slug = "tsv-grosshadern"            # wird für eindeutige Termin-IDs genutzt
+zeitzone = "Europe/Berlin"
+farbe = "#1d4f91"                    # Akzentfarbe der Website – Vereinsfarbe eintragen
+# Öffentliche Basisadresse, unter der die Dateien liegen (ohne / am Ende).
+# Lokal leer lassen; im GitHub-Workflow wird sie automatisch gesetzt.
+basis_url = ""
+
+[website]
+titel = "Vereinskalender"
+untertitel = "Alle Termine des TSV Großhadern – einmal abonnieren, immer aktuell."
+vorschau_tage = 60                   # wie weit die Terminliste auf der Website reicht
+
+# ---------------------------------------------------------------------------
+# Kalender (Feeds)
+#
+# sichtbarkeit   welche Sichtbarkeitsstufen der Termine enthalten sind
+# zugang         "oeffentlich" = normaler Link, auf der Website gelistet
+#                "intern"      = nur über persönliche geheime Links
+# abteilungen / mannschaften / kategorien
+#                Eingrenzung; leer = alle Termine der erlaubten Sichtbarkeit
+# inkl_hauptverein
+#                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
+# externe_feeds  z. B. iCal-Links aus der BFV-App ("iCal Export")
+# ---------------------------------------------------------------------------
+
+[[feed]]
+id = "alle"
+name = "TSV Großhadern – Alle Termine"
+beschreibung = "Alle öffentlichen Termine aller Abteilungen."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+
+[[feed]]
+id = "hauptverein"
+name = "TSV Großhadern – Verein"
+beschreibung = "Vereinsweite Termine: Feste, Mitgliederversammlung, Aktionen."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Hauptverein"]
+
+[[feed]]
+id = "fussball"
+name = "TSV Großhadern – Fußball"
+beschreibung = "Alle öffentlichen Termine der Fußballabteilung."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Fußball"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "fussball-jugend"
+name = "TSV Großhadern – Fußballjugend"
+beschreibung = "Turniere, Festivals und Veranstaltungen der Fußballjugend."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Fußball"]
+kategorien = ["Jugend"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "u9"
+name = "TSV Großhadern – U9"
+beschreibung = "Spiele, Trainings und Vereinstermine der U9 in einem Kalender."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+mannschaften = ["U9"]
+inkl_hauptverein = true
+externe_feeds = []   # hier den BFV-iCal-Link der U9 eintragen
+
+[[feed]]
+id = "u17"
+name = "TSV Großhadern – U17"
+beschreibung = "Spiele, Trainings und Vereinstermine der U17 in einem Kalender."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+mannschaften = ["U17"]
+inkl_hauptverein = true
+externe_feeds = []   # hier den BFV-iCal-Link der U17 eintragen
+
+[[feed]]
+id = "judo"
+name = "TSV Großhadern – Judo"
+beschreibung = "Öffentliche Termine der Judoabteilung."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Judo"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "intern"
+name = "TSV Großhadern – Intern"
+beschreibung = "Alle öffentlichen Termine plus Ausschuss- und Gremiensitzungen."
+zugang = "intern"
+sichtbarkeit = ["oeffentlich", "intern"]
+
+[[feed]]
+id = "vorstand"
+name = "TSV Großhadern – Vorstand"
+beschreibung = "Intern plus Vorstandstermine."
+zugang = "intern"
+sichtbarkeit = ["oeffentlich", "intern", "vorstand"]
