@@ -202,7 +202,8 @@ def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
     sicht = next((v for k, v in SICHT_MAP.items() if sicht_roh.startswith(k)), "oeffentlich")
     return Termin(
         id=rec["id"], titel=titel, start=start, ende=ende_w, ganztaegig=ganz,
-        wiederholung=regel, ort=(f.get("Ort") or "").strip(),
+        wiederholung=regel,
+        ort=", ".join(x for x in ((f.get("Ort") or "").strip(), (f.get("Adresse") or "").strip()) if x),
         abteilung=(f.get("Abteilung") or "").strip(),
         kategorie=(f.get("Kategorie") or "").strip(),
         mannschaft=(f.get("Mannschaft") or "").strip(),
