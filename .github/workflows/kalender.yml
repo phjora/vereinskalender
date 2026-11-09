@@ -6,9 +6,12 @@ on:
   schedule:
     - cron: "17 */3 * * *"   # alle 3 Stunden (schont das Airtable-Limit von 1.000 Abrufen/Monat)
   workflow_dispatch:        # manuell starten über "Run workflow"
+  issues:                   # Airtable-Automation legt ein Issue an -> sofortiger Neubau
+    types: [opened]
 
 permissions:
   contents: read
+  issues: write
   pages: write
   id-token: write
 
@@ -18,6 +21,8 @@ concurrency:
 
 jobs:
   bauen:
+    # Issues lösen den Bau nur aus, wenn sie vom Repo-Besitzer (über Airtable) kommen
+    if: github.event_name != 'issues' || (github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'Kalender aktualisieren'))
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -46,3 +51,9 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      - name: Auslöse-Issue schließen
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue close ${{ github.event.issue.number }} --repo ${{ github.repository }} --comment "Kalender neu gebaut ✓"
