@@ -73,6 +73,7 @@ class Feed:
     kategorien: list[str] = field(default_factory=list)
     inkl_hauptverein: bool = False
     externe_feeds: list[str] = field(default_factory=list)
+    ohne_kategorien: list[str] = field(default_factory=list)
 
     def passt(self, t: Termin) -> bool:
         if t.sichtbarkeit not in self.sichtbarkeit:
@@ -81,9 +82,15 @@ class Feed:
             return True
         if self.abteilungen and t.abteilung not in self.abteilungen:
             return False
-        if self.kategorien and t.kategorie not in self.kategorien:
+        if t.kategorie in self.ohne_kategorien:
             return False
-        if self.mannschaften and t.mannschaft not in self.mannschaften:
+        kat_ok = t.kategorie in self.kategorien
+        mann_ok = t.mannschaft in self.mannschaften
+        if self.kategorien and self.mannschaften:
+            return kat_ok or mann_ok  # beides angegeben: eins von beiden reicht
+        if self.kategorien and not kat_ok:
+            return False
+        if self.mannschaften and not mann_ok:
             return False
         return True
 

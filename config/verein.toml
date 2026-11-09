@@ -27,6 +27,7 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 #                Eingrenzung; leer = alle Termine der erlaubten Sichtbarkeit
 # inkl_hauptverein
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
+# ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
 # externe_feeds  z. B. iCal-Links aus der BFV-App ("iCal Export")
 # ---------------------------------------------------------------------------
 
@@ -61,7 +62,10 @@ beschreibung = "Turniere, Festivals und Veranstaltungen der Fußballjugend."
 zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 abteilungen = ["Fußball"]
+# Jugendtermine ODER Termine einer Jugendmannschaft – aber ohne die vielen Trainings
 kategorien = ["Jugend"]
+mannschaften = ["Bambini", "U8", "U9", "U10", "U11", "U12", "U13", "U14", "U15", "U17", "U19"]
+ohne_kategorien = ["Training"]
 inkl_hauptverein = true
 
 [[feed]]
