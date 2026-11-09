@@ -20,7 +20,18 @@ damit das System auch für andere Vereine genutzt werden kann.
 
 Nur Python-Standardbibliothek (ab 3.11), keine Installation nötig.
 
-## Termine pflegen (`data/termine.csv`)
+## Termine pflegen mit Airtable (empfohlen)
+
+Base „Vereinskalender TSV Großhadern“, Tabelle „Termine“. Eingabe über das Formular
+„Termin eintragen“ oder direkt in der Tabelle; Freigabe über die Interface-Seite „Zur Freigabe“.
+Nur Termine mit Status **Freigegeben** landen im Kalender. „Notiz intern“ und „Eingereicht von“
+werden nie veröffentlicht.
+
+GitHub-Secrets: `AIRTABLE_TOKEN` (Personal Access Token, nur Lesezugriff `data.records:read`
+auf diese eine Base) und `AIRTABLE_BASE` (`appWarqQIpadIrt7W`). Sind sie gesetzt, liest der
+Generator aus Airtable statt aus der CSV. Abruf alle 3 Stunden (Gratis-Limit 1.000 Abrufe/Monat).
+
+## Termine pflegen ohne Airtable (`data/termine.csv`)
 
 | Spalte | Beispiel | Hinweis |
 | --- | --- | --- |

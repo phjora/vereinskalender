@@ -387,6 +387,43 @@ def beschreibe_regel(t: Termin) -> str:
     return "regelmäßig"
 
 
+def vorkommen(t: Termin, von: date, bis: date) -> list:
+    """Einzelne Vorkommen eines (ggf. wiederkehrenden) Termins im Zeitraum – für die Monatsansicht."""
+    erster = t.start.date() if isinstance(t.start, datetime) else t.start
+    dauer = t.ende - t.start
+    if not t.wiederholung:
+        return [t.start] if von <= erster <= bis else []
+    teile = dict(p.split("=", 1) for p in t.wiederholung.split(";") if "=" in p)
+    schritt = int(teile.get("INTERVAL", 1))
+    ende = bis
+    if "UNTIL" in teile:
+        ende = min(ende, datetime.strptime(teile["UNTIL"][:8], "%Y%m%d").date())
+    ergebnis = []
+    if teile.get("FREQ") == "WEEKLY":
+        tage = [BYDAY[d] for d in teile.get("BYDAY", "").split(",") if d in BYDAY] or [erster.weekday()]
+        woche = erster - timedelta(days=erster.weekday())
+        while woche <= ende:
+            for wd in sorted(tage):
+                d = woche + timedelta(days=wd)
+                if erster <= d <= ende and d >= von:
+                    ergebnis.append(datetime.combine(d, t.start.timetz()) if isinstance(t.start, datetime) else d)
+            woche += timedelta(weeks=schritt)
+    elif teile.get("FREQ") == "MONTHLY":
+        j, m = erster.year, erster.month
+        while date(j, m, 1) <= ende:
+            try:
+                d = date(j, m, erster.day)
+                if erster <= d <= ende and d >= von:
+                    ergebnis.append(datetime.combine(d, t.start.timetz()) if isinstance(t.start, datetime) else d)
+            except ValueError:
+                pass
+            m += schritt
+            j, m = j + (m - 1) // 12, (m - 1) % 12 + 1
+    else:
+        ergebnis = [t.start] if von <= erster <= bis else []
+    return ergebnis
+
+
 def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis: str) -> None:
     v, w = cfg["verein"], cfg["website"]
     heute = datetime.now(ZoneInfo(v["zeitzone"])).date()
@@ -406,6 +443,11 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
         "basis": basis, "feeds": feed_daten, "abteilungen": abteilungen,
         "termine": [termin_json(t) for t in einzel],
         "regelmaessig": [termin_json(t) for t in regel],
+        "vorkommen": sorted(
+            ({**termin_json(t), "start": s.isoformat(),
+              "ende": (s + (t.ende - t.start)).isoformat() if isinstance(s, datetime) else None}
+             for t in oeff for s in vorkommen(t, heute - timedelta(days=62), heute + timedelta(days=400))),
+            key=lambda d: d["start"]),
     }
     vorlage = (Path(__file__).parent / "website.html").read_text(encoding="utf-8")
     seite = (vorlage

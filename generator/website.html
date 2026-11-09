@@ -39,6 +39,37 @@
   details { border: 1px solid var(--linie); border-radius: 12px; padding: 12px 16px; margin-top: 8px; }
   summary { cursor: pointer; font-weight: 600; }
   details ol { padding-left: 20px; margin: 10px 0 4px; }
+  .kopfzeile { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 32px; }
+  .kopfzeile h2 { margin: 0; }
+  .umschalter { display: inline-flex; border: 1px solid var(--linie); border-radius: 10px; padding: 3px; background: var(--flaeche); }
+  .umschalter button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; font: inherit; font-size: 14px; cursor: pointer; color: var(--leise); }
+  .umschalter button.aktiv { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); font-weight: 600; }
+  .filter { margin-top: 12px; }
+  .monatskopf { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+  .monatsname { font-size: 18px; font-weight: 700; min-width: 170px; text-align: center; }
+  .pfeil { border: 1px solid var(--linie); background: #fff; border-radius: 8px; width: 34px; height: 34px; font-size: 20px; line-height: 1; cursor: pointer; color: var(--text); }
+  #heute { margin-left: auto; }
+  .raster { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid var(--linie); border-left: 1px solid var(--linie); border-radius: 10px; overflow: hidden; }
+  .wt { font-size: 12px; color: var(--leise); text-align: center; padding: 6px 0; background: var(--flaeche); border-right: 1px solid var(--linie); border-bottom: 1px solid var(--linie); }
+  .zelle { min-height: 104px; padding: 4px; border-right: 1px solid var(--linie); border-bottom: 1px solid var(--linie); cursor: pointer; background: #fff; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .zelle.fremd { background: #fafbfc; }
+  .zelle.fremd .nr { color: #b4bac2; }
+  .zelle.gewaehlt { outline: 2px solid var(--akzent); outline-offset: -2px; }
+  .nr { font-size: 13px; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; }
+  .zelle.heute .nr { background: var(--akzent); color: #fff; font-weight: 700; }
+  .ev { font-size: 12px; line-height: 1.3; padding: 1px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--f); background: color-mix(in srgb, var(--f) 12%, #fff); }
+  .mehr { font-size: 11px; color: var(--leise); padding-left: 5px; }
+  .punkte { display: none; gap: 3px; justify-content: center; flex-wrap: wrap; }
+  .punkt { width: 6px; height: 6px; border-radius: 50%; background: var(--f); }
+  #tagesliste { margin-top: 14px; }
+  #tagesliste h3 { font-size: 16px; margin: 0 0 4px; }
+  .termin .farbe { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--f); margin-right: 6px; }
+  @media (max-width: 640px) {
+    .zelle { min-height: 52px; align-items: center; }
+    .ev, .mehr { display: none; }
+    .punkte { display: flex; }
+    .monatsname { min-width: 0; flex: 1; font-size: 16px; }
+  }
   footer { color: var(--leise); font-size: 13px; text-align: center; padding: 24px; border-top: 1px solid var(--linie); }
   .leer { color: var(--leise); padding: 12px 0; }
 </style>
@@ -70,12 +101,31 @@
     </ol>
   </details>
 
-  <h2>Nächste Termine</h2>
+  <div class="kopfzeile">
+    <h2>Termine</h2>
+    <div class="umschalter" role="tablist">
+      <button class="aktiv" data-ansicht="monat" role="tab">Monat</button>
+      <button data-ansicht="liste" role="tab">Liste</button>
+    </div>
+  </div>
   <div class="filter" id="filter"></div>
-  <div id="liste"></div>
 
-  <h2>Regelmäßige Termine</h2>
-  <div id="regel"></div>
+  <section id="ansicht-monat">
+    <div class="monatskopf">
+      <button class="pfeil" id="zurueck" aria-label="Vorheriger Monat">‹</button>
+      <div class="monatsname" id="monatsname"></div>
+      <button class="pfeil" id="vor" aria-label="Nächster Monat">›</button>
+      <button class="chip" id="heute">Heute</button>
+    </div>
+    <div class="raster" id="raster"></div>
+    <div id="tagesliste"></div>
+  </section>
+
+  <section id="ansicht-liste" hidden>
+    <div id="liste"></div>
+    <h2>Regelmäßige Termine</h2>
+    <div id="regel"></div>
+  </section>
 </main>
 <footer>{{VEREIN}} · Termine werden automatisch aktualisiert</footer>
 
@@ -138,8 +188,11 @@ document.getElementById('filter').addEventListener('click', e => {
   auswahl = b.dataset.a;
   filterZeichnen();
   listeZeichnen();
+  monatZeichnen();
 });
 
+const FARBEN = ['#1d4f91', '#2e8b57', '#c0622b', '#8e44ad', '#b03a48', '#1f8a8a', '#7a6a1f'];
+const farbe = a => FARBEN[Math.max(0, DATEN.abteilungen.indexOf(a)) % FARBEN.length];
 const passt = t => auswahl === 'Alle' || t.abteilung === auswahl || t.abteilung === 'Hauptverein';
 const marken = t => [t.abteilung, t.mannschaft].filter(Boolean).map(m => `<span class="marke">${esc(m)}</span>`).join('');
 
@@ -163,9 +216,77 @@ function listeZeichnen() {
       <div class="meta">${marken(t)}</div></div></div>`).join('') : '<div class="leer">Keine regelmäßigen Termine.</div>';
 }
 
+// ---------- Monatsansicht ----------
+const heuteD = new Date();
+let monat = new Date(heuteD.getFullYear(), heuteD.getMonth(), 1);
+let gewaehlt = null;
+const schluessel = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const MONATE_LANG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const uhrzeit = t => t.ganztaegig || t.start.length === 10 ? 'ganztägig' : t.start.slice(11, 16) + ' Uhr';
+
+function nachTag() {
+  const m = {};
+  DATEN.vorkommen.filter(passt).forEach(t => (m[t.start.slice(0, 10)] ||= []).push(t));
+  return m;
+}
+
+function monatZeichnen() {
+  const proTag = nachTag();
+  document.getElementById('monatsname').textContent = `${MONATE_LANG[monat.getMonth()]} ${monat.getFullYear()}`;
+  const start = new Date(monat);
+  start.setDate(1 - ((monat.getDay() + 6) % 7));
+  let h = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(w => `<div class="wt">${w}</div>`).join('');
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    if (i === 35 && d.getMonth() !== monat.getMonth()) break;
+    const k = schluessel(d), evs = proTag[k] || [];
+    const kl = ['zelle', d.getMonth() !== monat.getMonth() && 'fremd', k === schluessel(heuteD) && 'heute', k === gewaehlt && 'gewaehlt'].filter(Boolean).join(' ');
+    h += `<div class="${kl}" data-tag="${k}"><div class="nr">${d.getDate()}</div>
+      ${evs.slice(0, 3).map(t => `<div class="ev" style="--f:${farbe(t.abteilung)}" title="${esc(t.titel)}">${t.ganztaegig || t.start.length === 10 ? '' : t.start.slice(11, 16) + ' '}${esc(t.titel)}</div>`).join('')}
+      ${evs.length > 3 ? `<div class="mehr">+${evs.length - 3} weitere</div>` : ''}
+      <div class="punkte">${evs.slice(0, 4).map(t => `<span class="punkt" style="--f:${farbe(t.abteilung)}"></span>`).join('')}</div></div>`;
+  }
+  document.getElementById('raster').innerHTML = h;
+  tageslisteZeichnen(proTag);
+}
+
+function tageslisteZeichnen(proTag) {
+  const box = document.getElementById('tagesliste');
+  if (!gewaehlt) { box.innerHTML = '<div class="leer">Tippe auf einen Tag, um seine Termine zu sehen.</div>'; return; }
+  const d = new Date(gewaehlt + 'T00:00:00'), evs = proTag[gewaehlt] || [];
+  box.innerHTML = `<h3>${TAGE[d.getDay()]}, ${d.getDate()}. ${MONATE_LANG[d.getMonth()]}</h3>` + (evs.length ? evs.map(t => `
+    <div class="termin" style="grid-template-columns:1fr"><div>
+      <h4><span class="farbe" style="--f:${farbe(t.abteilung)}"></span>${esc(t.titel)}</h4>
+      <div class="meta">${uhrzeit(t)}${t.ort ? ' · ' + esc(t.ort) : ''}</div>
+      <div class="meta">${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div></div>`).join('')
+    : '<div class="leer">Keine Termine an diesem Tag.</div>');
+}
+
+document.getElementById('raster').addEventListener('click', e => {
+  const z = e.target.closest('[data-tag]');
+  if (!z) return;
+  gewaehlt = z.dataset.tag;
+  const d = new Date(gewaehlt + 'T00:00:00');
+  if (d.getMonth() !== monat.getMonth()) monat = new Date(d.getFullYear(), d.getMonth(), 1);
+  monatZeichnen();
+});
+document.getElementById('zurueck').onclick = () => { monat = new Date(monat.getFullYear(), monat.getMonth() - 1, 1); monatZeichnen(); };
+document.getElementById('vor').onclick = () => { monat = new Date(monat.getFullYear(), monat.getMonth() + 1, 1); monatZeichnen(); };
+document.getElementById('heute').onclick = () => { monat = new Date(heuteD.getFullYear(), heuteD.getMonth(), 1); gewaehlt = schluessel(heuteD); monatZeichnen(); };
+
+document.querySelector('.umschalter').addEventListener('click', e => {
+  const b = e.target.closest('[data-ansicht]');
+  if (!b) return;
+  document.querySelectorAll('.umschalter button').forEach(x => x.classList.toggle('aktiv', x === b));
+  document.getElementById('ansicht-monat').hidden = b.dataset.ansicht !== 'monat';
+  document.getElementById('ansicht-liste').hidden = b.dataset.ansicht !== 'liste';
+});
+
+gewaehlt = schluessel(heuteD);
 feedsZeichnen();
 filterZeichnen();
 listeZeichnen();
+monatZeichnen();
 </script>
 </body>
 </html>
