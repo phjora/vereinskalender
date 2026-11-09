@@ -58,6 +58,10 @@
   .nr { font-size: 13px; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; }
   .zelle.heute .nr { background: var(--akzent); color: #fff; font-weight: 700; }
   .ev { font-size: 12px; line-height: 1.3; padding: 1px 5px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid var(--f); background: color-mix(in srgb, var(--f) 12%, #fff); }
+  .punkt.abgesagt { background: none; box-shadow: inset 0 0 0 1.5px var(--f); }
+  .ev.abgesagt { text-decoration: line-through; opacity: .55; }
+  .abgesagt-marke { display: inline-block; font-size: 12px; font-weight: 600; color: #b03a48; background: #fbe9eb; border-radius: 6px; padding: 1px 7px; margin-right: 6px; }
+  .termin.abgesagt h4 { text-decoration: line-through; color: var(--leise); }
   .mehr { font-size: 11px; color: var(--leise); padding-left: 5px; }
   .punkte { display: none; gap: 3px; justify-content: center; flex-wrap: wrap; }
   .punkt { width: 6px; height: 6px; border-radius: 50%; background: var(--f); }
@@ -201,11 +205,11 @@ function listeZeichnen() {
   document.getElementById('liste').innerHTML = liste.length ? liste.map(t => {
     const d = new Date(t.start.length === 10 ? t.start + 'T00:00:00' : t.start);
     const zeit = t.ganztaegig ? 'ganztägig' : d.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}) + ' Uhr';
-    return `<div class="termin">
+    return `<div class="termin${'abgesagt' in t ? ' abgesagt' : ''}">
       <div class="datum"><div class="tag">${d.getDate()}</div><div class="rest">${TAGE[d.getDay()]} · ${MONATE[d.getMonth()]}</div></div>
       <div><h4>${esc(t.titel)}</h4>
         <div class="meta">${zeit}${t.ort ? ' · ' + esc(t.ort) : ''}</div>
-        <div class="meta">${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div>
+        <div class="meta">${absage(t)}${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div>
     </div>`;
   }).join('') : '<div class="leer">Keine Termine in den nächsten Wochen.</div>';
 
@@ -222,6 +226,7 @@ let monat = new Date(heuteD.getFullYear(), heuteD.getMonth(), 1);
 let gewaehlt = null;
 const schluessel = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const MONATE_LANG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const absage = t => 'abgesagt' in t ? `<span class="abgesagt-marke">Abgesagt${t.abgesagt ? ': ' + esc(t.abgesagt) : ''}</span>` : '';
 const uhrzeit = t => t.ganztaegig || t.start.length === 10 ? 'ganztägig' : t.start.slice(11, 16) + ' Uhr';
 
 function nachTag() {
@@ -242,9 +247,9 @@ function monatZeichnen() {
     const k = schluessel(d), evs = proTag[k] || [];
     const kl = ['zelle', d.getMonth() !== monat.getMonth() && 'fremd', k === schluessel(heuteD) && 'heute', k === gewaehlt && 'gewaehlt'].filter(Boolean).join(' ');
     h += `<div class="${kl}" data-tag="${k}"><div class="nr">${d.getDate()}</div>
-      ${evs.slice(0, 3).map(t => `<div class="ev" style="--f:${farbe(t.abteilung)}" title="${esc(t.titel)}">${t.ganztaegig || t.start.length === 10 ? '' : t.start.slice(11, 16) + ' '}${esc(t.titel)}</div>`).join('')}
+      ${evs.slice(0, 3).map(t => `<div class="ev${'abgesagt' in t ? ' abgesagt' : ''}" style="--f:${farbe(t.abteilung)}" title="${esc(t.titel)}${'abgesagt' in t ? ' (abgesagt)' : ''}">${t.ganztaegig || t.start.length === 10 ? '' : t.start.slice(11, 16) + ' '}${esc(t.titel)}</div>`).join('')}
       ${evs.length > 3 ? `<div class="mehr">+${evs.length - 3} weitere</div>` : ''}
-      <div class="punkte">${evs.slice(0, 4).map(t => `<span class="punkt" style="--f:${farbe(t.abteilung)}"></span>`).join('')}</div></div>`;
+      <div class="punkte">${evs.slice(0, 4).map(t => `<span class="punkt${'abgesagt' in t ? ' abgesagt' : ''}" style="--f:${farbe(t.abteilung)}"></span>`).join('')}</div></div>`;
   }
   document.getElementById('raster').innerHTML = h;
   tageslisteZeichnen(proTag);
@@ -255,10 +260,10 @@ function tageslisteZeichnen(proTag) {
   if (!gewaehlt) { box.innerHTML = '<div class="leer">Tippe auf einen Tag, um seine Termine zu sehen.</div>'; return; }
   const d = new Date(gewaehlt + 'T00:00:00'), evs = proTag[gewaehlt] || [];
   box.innerHTML = `<h3>${TAGE[d.getDay()]}, ${d.getDate()}. ${MONATE_LANG[d.getMonth()]}</h3>` + (evs.length ? evs.map(t => `
-    <div class="termin" style="grid-template-columns:1fr"><div>
+    <div class="termin${'abgesagt' in t ? ' abgesagt' : ''}" style="grid-template-columns:1fr"><div>
       <h4><span class="farbe" style="--f:${farbe(t.abteilung)}"></span>${esc(t.titel)}</h4>
       <div class="meta">${uhrzeit(t)}${t.ort ? ' · ' + esc(t.ort) : ''}</div>
-      <div class="meta">${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div></div>`).join('')
+      <div class="meta">${absage(t)}${marken(t)}${t.beschreibung ? esc(t.beschreibung) : ''}</div></div></div>`).join('')
     : '<div class="leer">Keine Termine an diesem Tag.</div>');
 }
 

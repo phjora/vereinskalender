@@ -59,6 +59,7 @@ class Termin:
     mannschaft: str
     sichtbarkeit: str
     beschreibung: str
+    absagen: dict = field(default_factory=dict)  # Datum -> Grund
 
 
 @dataclass
@@ -184,6 +185,47 @@ def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Ter
     return termine
 
 
+def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[list[dict], int]:
+    from urllib.parse import quote, urlencode
+    records, offset, anfragen = [], None, 0
+    while True:
+        q = {"filterByFormula": formel, "pageSize": "100"}
+        if offset:
+            q["offset"] = offset
+        url = f"https://api.airtable.com/v0/{base}/{quote(tabelle)}?{urlencode(q)}"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                antwort = json.loads(r.read())
+        except Exception as e:
+            warnung(f"Airtable-Tabelle '{tabelle}' nicht lesbar: {e}")
+            return records, anfragen
+        anfragen += 1
+        records += antwort.get("records", [])
+        offset = antwort.get("offset")
+        if not offset:
+            return records, anfragen
+
+
+def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
+    """Markiert Termine an den Ausfall-Tagen als abgesagt. Gibt die Zahl der Treffer zurück."""
+    treffer = 0
+    for a in ausfaelle:
+        f = a.get("fields", {})
+        if not f.get("Datum"):
+            continue
+        tag = date.fromisoformat(f["Datum"][:10])
+        verknuepft = set(f.get("Termin") or [])
+        mannschaft = (f.get("Mannschaft") or "").strip()
+        grund = (f.get("Grund") or "").strip()
+        for t in termine:
+            if t.id in verknuepft or (mannschaft and t.mannschaft == mannschaft):
+                if vorkommen(t, tag, tag):
+                    t.absagen[tag] = grund
+                    treffer += 1
+    return treffer
+
+
 def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
     f = rec.get("fields", {})
     titel = (f.get("Titel") or "").strip()
@@ -269,25 +311,46 @@ def zeitfeld(name: str, wert, tzname: str) -> str:
 
 
 def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
+    erster = t.start.date() if isinstance(t.start, datetime) else t.start
+    einzel_abgesagt = not t.wiederholung and erster in t.absagen
     zeilen = [
         "BEGIN:VEVENT",
         f"UID:{t.id}@{slug}",
         f"DTSTAMP:{stempel}",
         zeitfeld("DTSTART", t.start, tzname),
         zeitfeld("DTEND", t.ende, tzname),
-        f"SUMMARY:{esc(t.titel)}",
+        f"SUMMARY:{esc(('Abgesagt: ' if einzel_abgesagt else '') + t.titel)}",
     ]
     if t.wiederholung:
         zeilen.append(f"RRULE:{t.wiederholung}")
     if t.ort:
         zeilen.append(f"LOCATION:{esc(t.ort)}")
-    if t.beschreibung:
+    if einzel_abgesagt:
+        zeilen.append(f"DESCRIPTION:{esc(absage_text(t.absagen[erster], t.beschreibung))}")
+    elif t.beschreibung:
         zeilen.append(f"DESCRIPTION:{esc(t.beschreibung)}")
     kats = [k for k in (t.abteilung, t.kategorie, t.mannschaft) if k]
     if kats:
         zeilen.append("CATEGORIES:" + ",".join(esc(k) for k in kats))
     zeilen.append("END:VEVENT")
+    # Abgesagte Einzeltermine einer Serie: Ausnahme-Eintrag (RECURRENCE-ID) mit "Abgesagt:"
+    if t.wiederholung:
+        for tag, grund in sorted(t.absagen.items()):
+            s = datetime.combine(tag, t.start.timetz()) if isinstance(t.start, datetime) else tag
+            e = s + (t.ende - t.start)
+            zeilen += ["BEGIN:VEVENT", f"UID:{t.id}@{slug}", f"DTSTAMP:{stempel}",
+                       zeitfeld("RECURRENCE-ID", s, tzname), zeitfeld("DTSTART", s, tzname),
+                       zeitfeld("DTEND", e, tzname), f"SUMMARY:{esc('Abgesagt: ' + t.titel)}",
+                       f"DESCRIPTION:{esc(absage_text(grund, t.beschreibung))}"]
+            if t.ort:
+                zeilen.append(f"LOCATION:{esc(t.ort)}")
+            zeilen.append("END:VEVENT")
     return zeilen
+
+
+def absage_text(grund: str, beschreibung: str) -> str:
+    text = "Fällt aus" + (f": {grund}" if grund else ".")
+    return text + (f"\n\n{beschreibung}" if beschreibung else "")
 
 
 def entfalte(text: str) -> list[str]:
@@ -381,6 +444,8 @@ def termin_json(t: Termin) -> dict:
     }
     if t.wiederholung:
         d["regel"] = beschreibe_regel(t)
+    elif (t.start.date() if isinstance(t.start, datetime) else t.start) in t.absagen:
+        d["abgesagt"] = t.absagen[t.start.date() if isinstance(t.start, datetime) else t.start]
     return d
 
 
@@ -453,7 +518,8 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
         "regelmaessig": [termin_json(t) for t in regel],
         "vorkommen": sorted(
             ({**termin_json(t), "start": s.isoformat(),
-              "ende": (s + (t.ende - t.start)).isoformat() if isinstance(s, datetime) else None}
+              "ende": (s + (t.ende - t.start)).isoformat() if isinstance(s, datetime) else None,
+              **({"abgesagt": t.absagen[sd]} if (sd := s.date() if isinstance(s, datetime) else s) in t.absagen else {})}
              for t in oeff for s in vorkommen(t, heute - timedelta(days=62), heute + timedelta(days=400))),
             key=lambda d: d["start"]),
     }
@@ -485,6 +551,10 @@ def main() -> None:
     at_token, at_base = os.environ.get("AIRTABLE_TOKEN"), os.environ.get("AIRTABLE_BASE")
     if at_token and at_base:
         termine = lade_airtable(tz, at_token, at_base, os.environ.get("AIRTABLE_TABELLE", "Termine"))
+        ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle",
+                                      "IS_AFTER({Datum}, DATEADD(TODAY(), -60, 'days'))")
+        print(f"airtable    {len(ausfaelle)} Ausfälle ({n} API-Abrufe), "
+              f"{wende_ausfaelle_an(termine, ausfaelle)} Termine als abgesagt markiert")
     else:
         termine = lade_termine(tz)
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
