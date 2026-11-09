@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "17 * * * *"   # stündlich, damit BFV-Änderungen ankommen
+    - cron: "17 */3 * * *"   # alle 3 Stunden (schont das Airtable-Limit von 1.000 Abrufen/Monat)
   workflow_dispatch:        # manuell starten über "Run workflow"
 
 permissions:
@@ -36,6 +36,8 @@ jobs:
         env:
           VK_BASIS_URL: ${{ steps.pages.outputs.base_url }}
           VK_INTERN_TOKENS: ${{ secrets.VK_INTERN_TOKENS }}
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE: ${{ secrets.AIRTABLE_BASE }}
         run: python generator/build.py
 
       - uses: actions/upload-pages-artifact@v3

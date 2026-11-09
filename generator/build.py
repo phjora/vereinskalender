@@ -143,6 +143,75 @@ def lade_termine(tz: ZoneInfo) -> list[Termin]:
 
 
 # --------------------------------------------------------------------------
+# Airtable als Quelle (wenn AIRTABLE_TOKEN und AIRTABLE_BASE gesetzt sind)
+# --------------------------------------------------------------------------
+SICHT_MAP = {"öffentlich": "oeffentlich", "intern": "intern", "vorstand": "vorstand"}
+WIEDER_MAP = {"wöchentlich": "FREQ=WEEKLY", "alle 2 wochen": "FREQ=WEEKLY;INTERVAL=2",
+              "monatlich": "FREQ=MONTHLY"}
+
+
+def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Termin]:
+    """Liest nur freigegebene Termine. Eine Anfrage pro 100 Termine."""
+    from urllib.parse import quote, urlencode
+    termine, offset, anfragen = [], None, 0
+    while True:
+        q = {"filterByFormula": "{Status}='Freigegeben'", "pageSize": "100"}
+        if offset:
+            q["offset"] = offset
+        url = f"https://api.airtable.com/v0/{base}/{quote(tabelle)}?{urlencode(q)}"
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                antwort = json.loads(r.read())
+        except Exception as e:
+            fehler(f"Airtable nicht erreichbar: {e}")
+        anfragen += 1
+        for rec in antwort.get("records", []):
+            t = airtable_termin(rec, tz)
+            if t:
+                termine.append(t)
+        offset = antwort.get("offset")
+        if not offset:
+            break
+    print(f"airtable    {len(termine)} freigegebene Termine ({anfragen} API-Abrufe)")
+    return termine
+
+
+def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
+    f = rec.get("fields", {})
+    titel = (f.get("Titel") or "").strip()
+    if not titel or not f.get("Beginn"):
+        warnung(f"Airtable-Termin {rec['id']} ohne Titel oder Beginn – übersprungen")
+        return None
+    ganz = bool(f.get("Ganztägig"))
+    beginn = datetime.fromisoformat(f["Beginn"].replace("Z", "+00:00")).astimezone(tz)
+    ende = (datetime.fromisoformat(f["Ende"].replace("Z", "+00:00")).astimezone(tz)
+            if f.get("Ende") else None)
+    if ganz:
+        start = beginn.date()
+        ende_w = (ende.date() if ende else start) + timedelta(days=1)
+    else:
+        start = beginn
+        ende_w = ende if ende and ende > beginn else beginn + timedelta(hours=1, minutes=30)
+    regel = WIEDER_MAP.get((f.get("Wiederholung") or "").strip().lower(), "")
+    if regel and f.get("Wiederholen bis"):
+        bis = datetime.combine(date.fromisoformat(f["Wiederholen bis"][:10]),
+                               datetime.max.time(), tz).astimezone(timezone.utc)
+        regel += f";UNTIL={bis:%Y%m%dT%H%M%SZ}"
+    sicht_roh = (f.get("Sichtbarkeit") or "Öffentlich").lower()
+    sicht = next((v for k, v in SICHT_MAP.items() if sicht_roh.startswith(k)), "oeffentlich")
+    return Termin(
+        id=rec["id"], titel=titel, start=start, ende=ende_w, ganztaegig=ganz,
+        wiederholung=regel, ort=(f.get("Ort") or "").strip(),
+        abteilung=(f.get("Abteilung") or "").strip(),
+        kategorie=(f.get("Kategorie") or "").strip(),
+        mannschaft=(f.get("Mannschaft") or "").strip(),
+        sichtbarkeit=sicht, beschreibung=(f.get("Beschreibung") or "").strip(),
+        # "Notiz intern" und "Eingereicht von" werden bewusst nie gelesen
+    )
+
+
+# --------------------------------------------------------------------------
 # iCal schreiben
 # --------------------------------------------------------------------------
 def esc(text: str) -> str:
@@ -363,7 +432,11 @@ def main() -> None:
         unbekannt = set(f.sichtbarkeit) - STUFEN
         if unbekannt:
             fehler(f"Feed '{f.id}': unbekannte Sichtbarkeit {unbekannt}")
-    termine = lade_termine(tz)
+    at_token, at_base = os.environ.get("AIRTABLE_TOKEN"), os.environ.get("AIRTABLE_BASE")
+    if at_token and at_base:
+        termine = lade_airtable(tz, at_token, at_base, os.environ.get("AIRTABLE_TABELLE", "Termine"))
+    else:
+        termine = lade_termine(tz)
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     OUT.mkdir(exist_ok=True)
