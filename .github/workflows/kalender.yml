@@ -37,6 +37,17 @@ jobs:
       - id: pages
         uses: actions/configure-pages@v5
 
+      - name: Persönliche Zugangsschlüssel in den Logs unkenntlich machen
+        env:
+          VK_INTERN_TOKENS: ${{ secrets.VK_INTERN_TOKENS }}
+        run: |
+          python - <<'PY'
+          import json, os
+          roh = os.environ.get("VK_INTERN_TOKENS") or "{}"
+          for z in json.loads(roh).values():
+              print(f"::add-mask::{z['token']}")
+          PY
+
       - name: Kalender erzeugen
         env:
           VK_BASIS_URL: ${{ steps.pages.outputs.base_url }}
