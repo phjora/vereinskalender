@@ -32,6 +32,14 @@ ohne = ["alle"]   # enthält ohnehin alles Öffentliche
 Hauptverein = "#26684C"
 "Fußball" = "#2E7DAF"
 Judo = "#C8892B"
+"Turnen" = "#7A5BA6"
+"Aikido" = "#B5484F"
+"Karate" = "#8C5A2B"
+"Tischtennis" = "#1F8A8A"
+"Handball" = "#C2571A"
+"Basketball" = "#D0752A"
+"Tennis" = "#6F7A2B"
+"Fitness & Gymnastik" = "#A14A8C"
 
 [website]
 titel = "Vereinskalender"
@@ -136,7 +144,7 @@ externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanen
 
 [[feed]]
 id = "judo"
-gruppe = "Judo"
+gruppe = "Weitere Abteilungen"
 name = "TSV Großhadern – Judo"
 beschreibung = "Öffentliche Termine der Judoabteilung."
 zugang = "oeffentlich"
@@ -145,15 +153,106 @@ abteilungen = ["Judo"]
 inkl_hauptverein = true
 
 [[feed]]
+id = "turnen"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Turnen"
+beschreibung = "Öffentliche Termine der Abteilung Turnen."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Turnen"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "aikido"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Aikido"
+beschreibung = "Öffentliche Termine der Abteilung Aikido."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Aikido"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "karate"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Karate"
+beschreibung = "Öffentliche Termine der Abteilung Karate."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Karate"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "tischtennis"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Tischtennis"
+beschreibung = "Öffentliche Termine der Abteilung Tischtennis."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Tischtennis"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "handball"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Handball"
+beschreibung = "Öffentliche Termine der Abteilung Handball."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Handball"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "basketball"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Basketball"
+beschreibung = "Öffentliche Termine der Abteilung Basketball."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Basketball"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "tennis"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Tennis"
+beschreibung = "Öffentliche Termine der Abteilung Tennis."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Tennis"]
+inkl_hauptverein = true
+
+[[feed]]
+id = "fitness-gymnastik"
+gruppe = "Weitere Abteilungen"
+name = "TSV Großhadern – Fitness & Gymnastik"
+beschreibung = "Öffentliche Termine der Abteilung Fitness & Gymnastik."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+abteilungen = ["Fitness & Gymnastik"]
+inkl_hauptverein = true
+
+# --- Nicht öffentliche Bausteine: nur über persönliche Links (VK_INTERN_TOKENS) ---
+# Sie enthalten bewusst NUR die jeweilige Stufe und werden pro Person mit
+# öffentlichen Kalendern kombiniert, z. B. ["vorstand", "u9", "u17"].
+
+[[feed]]
+id = "trainer"
+name = "TSV Großhadern – Trainer:innen"
+beschreibung = "Termine für Trainer:innen, z. B. Trainersitzungen."
+zugang = "intern"
+sichtbarkeit = ["trainer"]
+
+[[feed]]
 id = "intern"
 name = "TSV Großhadern – Intern"
-beschreibung = "Alle öffentlichen Termine plus Ausschuss- und Gremiensitzungen."
+beschreibung = "Interne Termine: Ausschuss, Gremien, Trainersitzungen."
 zugang = "intern"
-sichtbarkeit = ["oeffentlich", "intern"]
+sichtbarkeit = ["trainer", "intern"]
 
 [[feed]]
 id = "vorstand"
 name = "TSV Großhadern – Vorstand"
-beschreibung = "Intern plus Vorstandstermine."
+beschreibung = "Alle internen Termine inklusive Vorstand."
 zugang = "intern"
-sichtbarkeit = ["oeffentlich", "intern", "vorstand"]
+sichtbarkeit = ["trainer", "intern", "vorstand"]

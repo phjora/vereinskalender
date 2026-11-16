@@ -12,7 +12,8 @@ iCal-Feeds, z. B. vom BFV) und erzeugt daraus:
 Nur Python-Standardbibliothek, damit es überall ohne Installation läuft.
 
 Interne Zugänge kommen aus der Umgebungsvariable VK_INTERN_TOKENS als JSON,
-z. B. {"Max Muster": {"token": "k3f9...", "feeds": ["intern"]}}.
+z. B. {"Max Muster": {"token": "k3f9...", "feeds": ["intern", "u9"]}} – pro Person entsteht
+ein persönlicher Kalender public/i/<token>/kalender.ics mit allem Gewählten.
 Ohne Variable wird ein Demo-Zugang erzeugt.
 """
 from __future__ import annotations
@@ -37,7 +38,7 @@ TERMINE = ROOT / "data" / "termine.csv"
 OUT = ROOT / "public"
 PRIVATE = ROOT / "build"
 
-STUFEN = {"oeffentlich", "intern", "vorstand"}
+STUFEN = {"oeffentlich", "trainer", "intern", "vorstand"}
 WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 BYDAY = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 
@@ -168,7 +169,7 @@ def lade_termine(tz: ZoneInfo) -> list[Termin]:
 # --------------------------------------------------------------------------
 # Airtable als Quelle (wenn AIRTABLE_TOKEN und AIRTABLE_BASE gesetzt sind)
 # --------------------------------------------------------------------------
-SICHT_MAP = {"öffentlich": "oeffentlich", "intern": "intern", "vorstand": "vorstand"}
+SICHT_MAP = {"öffentlich": "oeffentlich", "trainer": "trainer", "intern": "intern", "vorstand": "vorstand"}
 WIEDER_MAP = {"wöchentlich": "FREQ=WEEKLY", "alle 2 wochen": "FREQ=WEEKLY;INTERVAL=2",
               "monatlich": "FREQ=MONTHLY"}
 
@@ -649,7 +650,11 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
 
     feed_daten = [{"id": f.id, "name": f.name, "beschreibung": f.beschreibung,
                    "pfad": f"{f.id}.ics", "gruppe": f.gruppe or "Weitere Kalender",
-                   "kompakt": f.kompakt} for f in feeds if f.zugang == "oeffentlich"]
+                   "kompakt": f.kompakt,
+                   "art": ("mannschaft" if f.kompakt else "abteilung" if len(f.abteilungen) == 1
+                           and f.abteilungen[0] != "Hauptverein" and not f.zielgruppen and not f.mannschaften
+                           else "verein" if f.abteilungen == ["Hauptverein"] else "")}
+                  for f in feeds if f.zugang == "oeffentlich"]
     daten = {
         "basis": basis, "feeds": feed_daten, "abteilungen": abteilungen,
         "kombi": {"max": int(cfg.get("kombi", {}).get("max", 3)),
@@ -740,19 +745,23 @@ def main() -> None:
         zugaenge = json.loads(roh)
     else:
         demo = hashlib.sha256(b"demo-" + cfg["verein"]["slug"].encode()).hexdigest()[:24]
-        zugaenge = {"Demo-Zugang": {"token": demo, "feeds": ["intern", "vorstand"]}}
+        zugaenge = {"Demo-Zugang": {"token": demo, "feeds": ["vorstand", "hauptverein"]}}
         warnung("VK_INTERN_TOKENS nicht gesetzt – es wird ein Demo-Zugang erzeugt")
-    intern = {f.id: f for f in feeds if f.zugang == "intern"}
+    nach_id = {f.id: f for f in feeds}
     links = []
     for person, z in zugaenge.items():
         tok = z["token"]
         if not re.fullmatch(r"[A-Za-z0-9_-]{16,}", tok):
             fehler(f"Token von '{person}' zu kurz oder ungültig (mind. 16 Zeichen, A-Z a-z 0-9 _ -)")
-        for fid in z.get("feeds", list(intern)):
-            if fid not in intern:
-                fehler(f"Zugang '{person}': interner Feed '{fid}' existiert nicht")
-            n = schreibe_ics(OUT / "i" / tok / f"{fid}.ics", intern[fid], termine, cfg, stempel)
-            links.append(f"{person:<20} {fid:<10} {basis or '.'}/i/{tok}/{fid}.ics   ({n} Termine)")
+        teile = []
+        for fid in z.get("feeds", ["intern"]):
+            if fid not in nach_id:
+                fehler(f"Zugang '{person}': Kalender '{fid}' existiert nicht")
+            teile.append(nach_id[fid])
+        # Ein persönlicher Kalender pro Person: alles Gewählte in einem, jeder Termin nur einmal
+        kf = KombiFeed(teile)
+        n = schreibe_ics(OUT / "i" / tok / "kalender.ics", kf, termine, cfg, stempel)
+        links.append(f"{person:<20} {'+'.join(f.id for f in teile):<24} {basis or '.'}/i/{tok}/kalender.ics   ({n} Termine)")
     (PRIVATE / "intern-links.txt").write_text(
         "Interne Kalender-Links – NICHT veröffentlichen\n\n" + "\n".join(links) + "\n", encoding="utf-8")
     print(f"intern      {len(links)} persönliche Links -> build/intern-links.txt")

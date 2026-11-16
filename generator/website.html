@@ -27,7 +27,15 @@
   .feed h4 { margin: 0; font-size: 16px; }
   .gruppe { margin-bottom: 22px; }
   .kombi { border: 2px solid var(--akzent); border-radius: 12px; padding: 14px 16px; background: var(--flaeche); margin-bottom: 8px; }
-  .kombititel { font-weight: 700; }
+  .kombititel { font-weight: 700; font-size: 17px; margin-bottom: 10px; }
+  .rollen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .rolle { border: 1px solid var(--linie); background: #fff; border-radius: 10px; padding: 12px; font: inherit; font-weight: 600; cursor: pointer; color: var(--text); text-align: left; }
+  .rolle small { display: block; font-weight: 400; color: var(--leise); margin-top: 2px; }
+  .rolle.aktiv { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+  .tracker { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--linie); color: var(--leise); }
+  .tracker small { font-size: 13px; }
+  .wlabel { font-weight: 600; margin: 14px 0 6px; }
+  .einzeln { margin-bottom: 8px; }
   .kombi-ergebnis { background: #fff; border: 1px solid var(--linie); border-radius: 10px; padding: 12px; margin-top: 6px; }
   .kombi-ergebnis strong { display: block; margin-bottom: 8px; }
   .gruppenname { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--leise); margin: 18px 0 8px; }
@@ -140,14 +148,17 @@
   </section>
 
   <h2 id="abo">Kalender abonnieren</h2>
-  <p class="hinweis">Einmal abonnieren – neue und geänderte Termine erscheinen automatisch in deinem Handy- oder PC-Kalender.</p>
+  <p class="hinweis">Zwei Klicks, ein Abo: Neue und geänderte Termine erscheinen danach automatisch in deinem Handy- oder PC-Kalender.</p>
   <div class="kombi" id="kombi">
-    <div class="kombititel">Mehrere Kalender? Stell dir einen Kombi-Kalender zusammen</div>
-    <p class="hinweis" style="margin:4px 0 10px">Z. B. für zwei Mannschaften: ein einziges Abo, und jeder Termin steht nur einmal drin.</p>
-    <div class="filter" id="kombiwahl" style="margin-top:0"></div>
+    <div class="kombititel" id="wfrage">Wer bist du?</div>
+    <div class="rollen" id="rollen"></div>
+    <div id="wschritt"></div>
     <div id="kombiergebnis"></div>
   </div>
-  <div id="feeds"></div>
+  <details class="einzeln">
+    <summary>Alle Kalender einzeln anzeigen</summary>
+    <div id="feeds"></div>
+  </details>
 
   <details>
     <summary>So klappt das Abo auf dem iPhone / iPad / Mac</summary>
@@ -245,34 +256,61 @@ function feedsZeichnen() {
   };
   box.addEventListener('click', klick);
 
-  // ---------- Kombi-Kalender ----------
-  const kombinierbar = DATEN.feeds.filter(f => !DATEN.kombi.ohne.includes(f.id));
+  // ---------- Abfrage: Wer bist du? ----------
+  const ROLLEN = [
+    {id: 'eltern', name: 'Elternteil', info: 'Termine der Mannschaft meines Kindes'},
+    {id: 'mitglied', name: 'Mitglied / Spieler:in', info: 'Termine meiner Abteilung oder Mannschaft'},
+    {id: 'trainer', name: 'Trainer:in', info: 'Mannschaften und Trainer-Termine'},
+    {id: 'intern', name: 'Intern', info: 'Vorstand, Abteilungsleitung'},
+  ];
+  const teams = DATEN.feeds.filter(f => f.art === 'mannschaft');
+  const abteilungen = DATEN.feeds.filter(f => f.art === 'abteilung');
+  const verein = DATEN.feeds.find(f => f.art === 'verein');
+  let rolle = null;
   const gewaehlt = new Set();
-  const wahl = document.getElementById('kombiwahl'), ergebnis = document.getElementById('kombiergebnis');
-  const kombiZeichnen = () => {
-    wahl.innerHTML = kombinierbar.map(f =>
-      `<button class="chip ${gewaehlt.has(f.id) ? 'aktiv' : ''}" data-k="${esc(f.id)}">${esc(kurz(f.name))}</button>`).join('');
-    if (gewaehlt.size < 2) {
-      ergebnis.innerHTML = gewaehlt.size ? '<div class="leer" style="padding:6px 0 0">Wähle mindestens einen zweiten Kalender.</div>' : '';
+  const rollenBox = document.getElementById('rollen'), schritt = document.getElementById('wschritt'), ergebnis = document.getElementById('kombiergebnis');
+  const chips = liste => `<div class="filter" style="margin-top:0">${liste.map(f =>
+    `<button class="chip ${gewaehlt.has(f.id) ? 'aktiv' : ''}" data-k="${esc(f.id)}">${esc(kurz(f.name))}</button>`).join('')}</div>`;
+  const abfrageZeichnen = () => {
+    rollenBox.innerHTML = ROLLEN.map(r => `<button class="rolle ${rolle === r.id ? 'aktiv' : ''}" data-rolle="${r.id}">${esc(r.name)}<small>${esc(r.info)}</small></button>`).join('');
+    ergebnis.innerHTML = '';
+    if (!rolle) { schritt.innerHTML = ''; return; }
+    if (rolle === 'trainer' || rolle === 'intern') {
+      schritt.innerHTML = `<div class="kombi-ergebnis"><strong>Du bekommst einen persönlichen Kalender-Link vom Verein.</strong>
+        <p class="hinweis" style="margin:0">Darin stehen ${rolle === 'trainer' ? 'deine Mannschaften und die Trainer-Termine' : 'die internen Termine und auf Wunsch deine Mannschaften'} – alles in einem Abo. Melde dich dafür bei deiner Abteilungsleitung oder der Geschäftsstelle.</p></div>`;
       return;
     }
-    const teile = kombinierbar.filter(f => gewaehlt.has(f.id)).sort((a, b) => a.id < b.id ? -1 : 1);
-    const k = {pfad: 'kombi/' + teile.map(f => f.id).join('_') + '.ics'};
+    schritt.innerHTML = rolle === 'eltern'
+      ? `<div class="wlabel">In welcher Mannschaft spielt dein Kind?</div>${chips(teams)}<p class="hinweis" style="margin:8px 0 0">Mehrere Kinder? Einfach mehrere Mannschaften antippen.</p>`
+      : `<div class="wlabel">Deine Abteilung</div>${chips(abteilungen)}${teams.length ? `<div class="wlabel">Oder deine Mannschaft</div>${chips(teams)}` : ''}`;
+    let teile = DATEN.feeds.filter(f => gewaehlt.has(f.id)).sort((a, b) => a.id < b.id ? -1 : 1);
+    if (!teile.length) {
+      if (rolle === 'mitglied' && verein) ergebnis.innerHTML = `<p class="hinweis" style="margin:12px 0 0">Keine Abteilung? <a href="#" data-nurverein>Nur die Vereinstermine abonnieren</a></p>`;
+      return;
+    }
+    const k = {pfad: teile.length === 1 ? teile[0].pfad : 'kombi/' + teile.map(f => f.id).join('_') + '.ics'};
     ergebnis.innerHTML = `<div class="kombi-ergebnis">
-      <strong>${teile.map(f => esc(kurz(f.name))).join(' + ')}</strong>
+      <strong>Dein Kalender: ${teile.map(f => esc(kurz(f.name))).join(' + ')}</strong>
       <div class="knoepfe">${knoepfe(k)}</div>${qr(k)}
-      <p class="hinweis" style="margin:10px 0 0">Tipp: Hast du einen dieser Kalender schon einzeln abonniert, lösche das alte Abo – sonst siehst du Termine doppelt.</p></div>`;
+      <p class="hinweis" style="margin:10px 0 0">Enthält auch die wichtigen Vereinstermine. Jeder Termin steht nur einmal drin.</p>
+      ${teile.some(f => f.gruppe === 'Fußball') ? `<label class="tracker"><input type="checkbox" disabled> <span><b>inkl. Haderner Ergebnistracker</b> <span class="marke">kommt bald</span><br><small>Ergebnisse der TSV-Teams direkt aufs Handy</small></span></label>` : ''}</div>`;
   };
-  wahl.addEventListener('click', e => {
+  document.getElementById('kombi').addEventListener('click', e => {
+    const r = e.target.closest('[data-rolle]');
+    if (r) { rolle = r.dataset.rolle; gewaehlt.clear(); abfrageZeichnen(); return; }
+    if (e.target.closest('[data-nurverein]')) { e.preventDefault(); gewaehlt.add(verein.id); abfrageZeichnen(); return; }
     const b = e.target.closest('[data-k]');
-    if (!b) return;
-    if (gewaehlt.has(b.dataset.k)) gewaehlt.delete(b.dataset.k);
-    else if (gewaehlt.size < DATEN.kombi.max) gewaehlt.add(b.dataset.k);
-    else { ergebnis.innerHTML = `<div class="leer" style="padding:6px 0 0">Maximal ${DATEN.kombi.max} Kalender lassen sich kombinieren – oder nimm gleich „Alle Termine“.</div>`; return; }
-    kombiZeichnen();
+    if (b) {
+      if (gewaehlt.has(b.dataset.k)) gewaehlt.delete(b.dataset.k);
+      else if (gewaehlt.size < DATEN.kombi.max) gewaehlt.add(b.dataset.k);
+      else { alertHinweis(); return; }
+      abfrageZeichnen();
+      return;
+    }
+    klick(e);
   });
-  ergebnis.addEventListener('click', klick);
-  kombiZeichnen();
+  const alertHinweis = () => { ergebnis.insertAdjacentHTML('beforeend', `<div class="leer" style="padding:6px 0 0">Maximal ${DATEN.kombi.max} lassen sich kombinieren – sonst nimm „Alle Termine“ aus der Liste unten.</div>`); };
+  abfrageZeichnen();
 }
 
 let auswahl = 'Alle';
