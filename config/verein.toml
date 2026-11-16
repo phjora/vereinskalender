@@ -70,12 +70,12 @@ abteilungen = ["Hauptverein"]
 id = "jugend"
 gruppe = "Ganzer Verein"
 name = "TSV Großhadern – Jugend"
-beschreibung = "Alles für die Jugend aus allen Abteilungen – ohne Trainings."
+beschreibung = "Veranstaltungen für die Jugend aus allen Abteilungen – ohne Trainings und Spiele."
 zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 zielgruppen = ["Jugend"]
 ohne_zielgruppen = ["Erwachsene"]
-ohne_kategorien = ["Training"]
+ohne_kategorien = ["Training", "Spiel"]
 inkl_hauptverein = true
 
 [[feed]]
