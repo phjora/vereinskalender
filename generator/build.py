@@ -506,6 +506,19 @@ def externe_termine(feeds: list, tz: ZoneInfo) -> list[Termin]:
     return termine
 
 
+class KombiFeed:
+    """Mehrere Kalender in einem: ein Termin ist drin, wenn er in mindestens einem steht – aber nur einmal."""
+    def __init__(self, feeds: list):
+        self.feeds = feeds
+        self.id = "_".join(f.id for f in feeds)
+        praefix = feeds[0].name.split(" – ")[0]
+        self.name = praefix + " – " + " + ".join(f.name.split(" – ")[-1] for f in feeds)
+        self.beschreibung = "Kombi-Kalender: " + ", ".join(f.name.split(" – ")[-1] for f in feeds)
+
+    def passt(self, t) -> bool:
+        return any(f.passt(t) for f in self.feeds)
+
+
 def schreibe_ics(pfad: Path, feed: Feed, termine: list[Termin], cfg: dict, stempel: str) -> int:
     v = cfg["verein"]
     tzname = v["zeitzone"]
@@ -639,6 +652,8 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
                    "kompakt": f.kompakt} for f in feeds if f.zugang == "oeffentlich"]
     daten = {
         "basis": basis, "feeds": feed_daten, "abteilungen": abteilungen,
+        "kombi": {"max": int(cfg.get("kombi", {}).get("max", 3)),
+                  "ohne": cfg.get("kombi", {}).get("ohne", ["alle"])},
         "termine": [termin_json(t) for t in einzel],
         "regelmaessig": [termin_json(t) for t in regel],
         "vorkommen": sorted(
@@ -705,6 +720,19 @@ def main() -> None:
         if f.zugang == "oeffentlich":
             n = schreibe_ics(OUT / f"{f.id}.ics", f, termine, cfg, stempel)
             print(f"öffentlich  {f.id:<16} {n:>3} Termine")
+
+    # Kombi-Kalender: alle Zweier-/Dreier-Kombinationen vorab erzeugen (kein Server nötig)
+    from itertools import combinations
+    k_cfg = cfg.get("kombi", {})
+    kombinierbar = sorted((f for f in feeds if f.zugang == "oeffentlich"
+                           and f.id not in k_cfg.get("ohne", ["alle"])), key=lambda f: f.id)
+    n_kombi = 0
+    for groesse in range(2, int(k_cfg.get("max", 3)) + 1):
+        for gruppe in combinations(kombinierbar, groesse):
+            kf = KombiFeed(list(gruppe))
+            schreibe_ics(OUT / "kombi" / f"{kf.id}.ics", kf, termine, cfg, stempel)
+            n_kombi += 1
+    print(f"kombi       {n_kombi} Kombi-Kalender")
 
     # Interne Zugänge: pro Person ein geheimer Ordner
     roh = os.environ.get("VK_INTERN_TOKENS")

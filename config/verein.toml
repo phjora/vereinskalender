@@ -21,6 +21,12 @@ zusaetzlich = [
   { datum = "12-31", name = "Silvester" },
 ]
 
+# Kombi-Kalender: mehrere Kalender in einem Link, jeder Termin nur einmal.
+# Alle Kombinationen bis "max" Kalender werden vorab erzeugt.
+[kombi]
+max = 3
+ohne = ["alle"]   # enthält ohnehin alles Öffentliche
+
 # Farben der Abteilungen im Monatskalender (nicht aufgeführte bekommen eine Ersatzfarbe)
 [abteilungsfarben]
 Hauptverein = "#26684C"
