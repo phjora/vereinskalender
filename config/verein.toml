@@ -82,7 +82,7 @@ zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U9"]
 inkl_hauptverein = true
-externe_feeds = []   # hier den BFV-iCal-Link der U9 eintragen
+externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/011MICV7L8000000VTVG0001VTR8C1K7"]   # BFV-Spiele U9
 
 [[feed]]
 id = "u17"
@@ -92,7 +92,7 @@ zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U17"]
 inkl_hauptverein = true
-externe_feeds = []   # hier den BFV-iCal-Link der U17 eintragen
+externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/02TPR2ED9K000000VS5489BRVSS9M1SM"]   # BFV-Spiele U17
 
 [[feed]]
 id = "judo"

@@ -219,7 +219,7 @@ def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
         mannschaft = (f.get("Mannschaft") or "").strip()
         grund = (f.get("Grund") or "").strip()
         for t in termine:
-            if t.id in verknuepft or (mannschaft and t.mannschaft == mannschaft):
+            if t.id in verknuepft or (mannschaft and t.mannschaft == mannschaft and not t.id.startswith("bfv-")):
                 if vorkommen(t, tag, tag):
                     t.absagen[tag] = grund
                     treffer += 1
@@ -379,6 +379,57 @@ def hole_extern(url: str) -> tuple[list[list[str]], list[list[str]]]:
     return tzs, evs
 
 
+def ical_text(wert: str) -> str:
+    return (wert.replace("\\n", "\n").replace("\\,", ",").replace("\\;", ";")
+            .replace("\\\\", "\\"))
+
+
+def ical_zeit(zeile: str, tz: ZoneInfo):
+    kopf, _, wert = zeile.partition(":")
+    if "VALUE=DATE" in kopf and "T" not in wert:
+        return date(int(wert[:4]), int(wert[4:6]), int(wert[6:8]))
+    dt = datetime.strptime(wert[:15], "%Y%m%dT%H%M%S")
+    if wert.endswith("Z"):
+        return dt.replace(tzinfo=timezone.utc).astimezone(tz)
+    m = re.search(r"TZID=([^;:]+)", kopf)
+    try:
+        return dt.replace(tzinfo=ZoneInfo(m.group(1))).astimezone(tz) if m else dt.replace(tzinfo=tz)
+    except Exception:
+        return dt.replace(tzinfo=tz)
+
+
+def externe_termine(feeds: list, tz: ZoneInfo) -> list[Termin]:
+    """Holt externe Feeds (z. B. BFV) und macht daraus normale öffentliche Termine der Mannschaft."""
+    termine, gesehen = [], set()
+    for feed in feeds:
+        mannschaft = feed.mannschaften[0] if len(feed.mannschaften) == 1 else ""
+        abteilung = feed.abteilungen[0] if len(feed.abteilungen) == 1 else "Fußball"
+        for url in feed.externe_feeds:
+            _, evs = hole_extern(url)
+            for block in evs:
+                felder = {}
+                for z in block:
+                    name = re.split(r"[;:]", z, maxsplit=1)[0]
+                    felder.setdefault(name, z)
+                uid = felder.get("UID", "").partition(":")[2].strip()
+                if not uid or uid in gesehen or "DTSTART" not in felder:
+                    continue
+                gesehen.add(uid)
+                start = ical_zeit(felder["DTSTART"], tz)
+                ende = ical_zeit(felder["DTEND"], tz) if "DTEND" in felder else start + timedelta(hours=2)
+                teile = [x.strip() for x in ical_text(felder.get("SUMMARY", ":Spiel").partition(":")[2]).split(",")]
+                titel = teile[0].replace("-", " – ", 1) if teile[0].count("-") == 1 else teile[0]
+                termine.append(Termin(
+                    id=f"bfv-{uid}", titel=titel, start=start, ende=ende,
+                    ganztaegig=isinstance(start, date) and not isinstance(start, datetime),
+                    wiederholung="", ort=ical_text(felder.get("LOCATION", ":").partition(":")[2]).strip(),
+                    abteilung=abteilung, kategorie="Spiel", mannschaft=mannschaft, sichtbarkeit="oeffentlich",
+                    beschreibung=", ".join(teile[1:] + ["Quelle: BFV"])))
+    if termine:
+        print(f"extern      {len(termine)} Spiele aus BFV-Feeds")
+    return termine
+
+
 def schreibe_ics(pfad: Path, feed: Feed, termine: list[Termin], cfg: dict, stempel: str) -> int:
     v = cfg["verein"]
     tzname = v["zeitzone"]
@@ -400,16 +451,6 @@ def schreibe_ics(pfad: Path, feed: Feed, termine: list[Termin], cfg: dict, stemp
     for t in termine:
         if feed.passt(t):
             zeilen += vevent(t, v["slug"], tzname, stempel)
-            anzahl += 1
-    for url in feed.externe_feeds:
-        tzs, evs = hole_extern(url)
-        for block in tzs:
-            tid = next((z[5:] for z in block if z.startswith("TZID:")), None)
-            if tid and tid not in tz_ids:
-                zeilen += block
-                tz_ids.add(tid)
-        for block in evs:
-            zeilen += block
             anzahl += 1
     zeilen.append("END:VCALENDAR")
     pfad.parent.mkdir(parents=True, exist_ok=True)
@@ -567,6 +608,7 @@ def main() -> None:
               f"{wende_ausfaelle_an(termine, ausfaelle)} Termine als abgesagt markiert")
     else:
         termine = lade_termine(tz)
+    termine += externe_termine(feeds, tz)
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     OUT.mkdir(exist_ok=True)
