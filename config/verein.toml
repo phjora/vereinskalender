@@ -12,6 +12,15 @@ farbe = "#26684C"                    # TSV-Grün aus dem Vereinslogo
 # Lokal leer lassen; im GitHub-Workflow wird sie automatisch gesetzt.
 basis_url = ""
 
+# Regelmäßige Termine dieser Kategorien entfallen an gesetzlichen Feiertagen (Bayern)
+# und an den zusätzlichen Tagen. Ausnahme pro Termin: Häkchen "Auch an Feiertagen" in Airtable.
+[feiertage]
+kategorien = ["Training"]
+zusaetzlich = [
+  { datum = "12-24", name = "Heiligabend" },
+  { datum = "12-31", name = "Silvester" },
+]
+
 # Farben der Abteilungen im Monatskalender (nicht aufgeführte bekommen eine Ersatzfarbe)
 [abteilungsfarben]
 Hauptverein = "#26684C"

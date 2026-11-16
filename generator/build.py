@@ -60,6 +60,8 @@ class Termin:
     sichtbarkeit: str
     beschreibung: str
     absagen: dict = field(default_factory=dict)  # Datum -> Grund
+    auch_feiertags: bool = False
+    ausnahmen: set = field(default_factory=set)   # entfallende Tage (z. B. Feiertage)
 
 
 @dataclass
@@ -207,6 +209,58 @@ def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[li
             return records, anfragen
 
 
+def ostersonntag(jahr: int) -> date:
+    a, b, c = jahr % 19, jahr // 100, jahr % 100
+    d, e = b // 4, b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    monat = (h + l - 7 * m + 114) // 31
+    tag = (h + l - 7 * m + 114) % 31 + 1
+    return date(jahr, monat, tag)
+
+
+def feiertage(jahr: int, cfg: dict) -> dict:
+    """Gesetzliche Feiertage (Bayern) plus in der Konfiguration ergänzte freie Tage."""
+    o = ostersonntag(jahr)
+    tage = {
+        date(jahr, 1, 1): "Neujahr", date(jahr, 1, 6): "Heilige Drei Könige",
+        o - timedelta(days=2): "Karfreitag", o + timedelta(days=1): "Ostermontag",
+        date(jahr, 5, 1): "Tag der Arbeit", o + timedelta(days=39): "Christi Himmelfahrt",
+        o + timedelta(days=50): "Pfingstmontag", o + timedelta(days=60): "Fronleichnam",
+        date(jahr, 8, 15): "Mariä Himmelfahrt", date(jahr, 10, 3): "Tag der Deutschen Einheit",
+        date(jahr, 11, 1): "Allerheiligen", date(jahr, 12, 25): "1. Weihnachtstag",
+        date(jahr, 12, 26): "2. Weihnachtstag",
+    }
+    for eintrag in cfg.get("feiertage", {}).get("zusaetzlich", []):
+        mm, tt = eintrag["datum"].split("-")
+        tage[date(jahr, int(mm), int(tt))] = eintrag.get("name", "frei")
+    return tage
+
+
+def wende_feiertage_an(termine: list[Termin], cfg: dict) -> int:
+    """Regelmäßige Trainings entfallen an Feiertagen (ohne 'Abgesagt'-Eintrag)."""
+    kategorien = set(cfg.get("feiertage", {}).get("kategorien", ["Training"]))
+    n = 0
+    for t in termine:
+        if not t.wiederholung or t.auch_feiertags or t.kategorie not in kategorien:
+            continue
+        erster = t.start.date() if isinstance(t.start, datetime) else t.start
+        bis = erster + timedelta(days=800)
+        alle = {}
+        for j in range(erster.year, bis.year + 1):
+            alle.update(feiertage(j, cfg))
+        for s_ in vorkommen(t, erster, bis):
+            tag_ = s_.date() if isinstance(s_, datetime) else s_
+            if tag_ in alle:
+                t.ausnahmen.add(tag_)
+                n += 1
+    return n
+
+
 def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
     """Markiert Termine an den Ausfall-Tagen als abgesagt. Gibt die Zahl der Treffer zurück."""
     treffer = 0
@@ -214,14 +268,15 @@ def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
         f = a.get("fields", {})
         if not f.get("Datum"):
             continue
-        tag = date.fromisoformat(f["Datum"][:10])
+        von = date.fromisoformat(f["Datum"][:10])
+        bis = date.fromisoformat(f["Bis"][:10]) if f.get("Bis") else von
         verknuepft = set(f.get("Termin") or [])
         mannschaft = (f.get("Mannschaft") or "").strip()
         grund = (f.get("Grund") or "").strip()
         for t in termine:
             if t.id in verknuepft or (mannschaft and t.mannschaft == mannschaft and not t.id.startswith("bfv-")):
-                if vorkommen(t, tag, tag):
-                    t.absagen[tag] = grund
+                for s_ in vorkommen(t, von, bis):
+                    t.absagen[s_.date() if isinstance(s_, datetime) else s_] = grund
                     treffer += 1
     return treffer
 
@@ -257,6 +312,7 @@ def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
         kategorie=(f.get("Kategorie") or "").strip(),
         mannschaft=(f.get("Mannschaft") or "").strip(),
         sichtbarkeit=sicht, beschreibung=(f.get("Beschreibung") or "").strip(),
+        auch_feiertags=bool(f.get("Auch an Feiertagen")),
         # "Notiz intern" und "Eingereicht von" werden bewusst nie gelesen
     )
 
@@ -323,6 +379,11 @@ def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
     ]
     if t.wiederholung:
         zeilen.append(f"RRULE:{t.wiederholung}")
+        for tag_ in sorted(t.ausnahmen):
+            if isinstance(t.start, datetime):
+                zeilen.append(f"EXDATE;TZID={tzname}:{datetime.combine(tag_, t.start.time()).strftime('%Y%m%dT%H%M%S')}")
+            else:
+                zeilen.append(f"EXDATE;VALUE=DATE:{tag_.strftime('%Y%m%d')}")
     if t.ort:
         zeilen.append(f"LOCATION:{esc(t.ort)}")
     if einzel_abgesagt:
@@ -502,6 +563,13 @@ def beschreibe_regel(t: Termin) -> str:
 
 
 def vorkommen(t: Termin, von: date, bis: date) -> list:
+    alle = _vorkommen(t, von, bis)
+    if not t.ausnahmen:
+        return alle
+    return [s_ for s_ in alle if (s_.date() if isinstance(s_, datetime) else s_) not in t.ausnahmen]
+
+
+def _vorkommen(t: Termin, von: date, bis: date) -> list:
     """Einzelne Vorkommen eines (ggf. wiederkehrenden) Termins im Zeitraum – für die Monatsansicht."""
     erster = t.start.date() if isinstance(t.start, datetime) else t.start
     dauer = t.ende - t.start
@@ -602,12 +670,14 @@ def main() -> None:
     at_token, at_base = os.environ.get("AIRTABLE_TOKEN"), os.environ.get("AIRTABLE_BASE")
     if at_token and at_base:
         termine = lade_airtable(tz, at_token, at_base, os.environ.get("AIRTABLE_TABELLE", "Termine"))
+        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen ausgelassen")
         ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle",
                                       "IS_AFTER({Datum}, DATEADD(TODAY(), -60, 'days'))")
         print(f"airtable    {len(ausfaelle)} Ausfälle ({n} API-Abrufe), "
               f"{wende_ausfaelle_an(termine, ausfaelle)} Termine als abgesagt markiert")
     else:
         termine = lade_termine(tz)
+        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen ausgelassen")
     termine += externe_termine(feeds, tz)
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
