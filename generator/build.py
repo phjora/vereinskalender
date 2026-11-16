@@ -61,6 +61,7 @@ class Termin:
     beschreibung: str
     absagen: dict = field(default_factory=dict)  # Datum -> Grund
     auch_feiertags: bool = False
+    zielgruppe: str = ""                          # Jugend / Erwachsene / Alle
     ausnahmen: set = field(default_factory=set)   # entfallende Tage (z. B. Feiertage)
 
 
@@ -79,9 +80,13 @@ class Feed:
     ohne_kategorien: list[str] = field(default_factory=list)
     gruppe: str = ""
     kompakt: bool = False
+    zielgruppen: list[str] = field(default_factory=list)
+    ohne_zielgruppen: list[str] = field(default_factory=list)
 
     def passt(self, t: Termin) -> bool:
         if t.sichtbarkeit not in self.sichtbarkeit:
+            return False
+        if t.zielgruppe and t.zielgruppe in self.ohne_zielgruppen:
             return False
         if self.inkl_hauptverein and t.abteilung == "Hauptverein" and t.kategorie != "Gremium":
             return True
@@ -89,15 +94,20 @@ class Feed:
             return False
         if t.kategorie in self.ohne_kategorien:
             return False
-        kat_ok = t.kategorie in self.kategorien
-        mann_ok = t.mannschaft in self.mannschaften
-        if self.kategorien and self.mannschaften:
-            return kat_ok or mann_ok  # beides angegeben: eins von beiden reicht
-        if self.kategorien and not kat_ok:
-            return False
-        if self.mannschaften and not mann_ok:
-            return False
-        return True
+        # Kategorien / Mannschaften / Zielgruppen: Sind mehrere angegeben, reicht eine Übereinstimmung.
+        bedingungen = [(self.kategorien, t.kategorie), (self.mannschaften, t.mannschaft),
+                       (self.zielgruppen, t.zielgruppe)]
+        gesetzt = [wert in liste for liste, wert in bedingungen if liste]
+        return any(gesetzt) if gesetzt else True
+
+
+def zielgruppe_fuer(angabe: str, mannschaft: str) -> str:
+    """Leere Zielgruppe: Jugendmannschaften (Bambini, U..) zählen automatisch als Jugend."""
+    if angabe:
+        return angabe
+    if mannschaft == "Bambini" or re.fullmatch(r"U\d+", mannschaft or ""):
+        return "Jugend"
+    return ""
 
 
 def fehler(msg: str) -> None:
@@ -149,6 +159,7 @@ def lade_termine(tz: ZoneInfo) -> list[Termin]:
                 mannschaft=(r.get("mannschaft") or "").strip(),
                 sichtbarkeit=sicht,
                 beschreibung=(r.get("beschreibung") or "").strip(),
+                zielgruppe=zielgruppe_fuer((r.get("zielgruppe") or "").strip(), (r.get("mannschaft") or "").strip()),
                 # notiz_intern wird bewusst nie gelesen -> landet nie in einem Kalender
             ))
     return termine
@@ -315,6 +326,7 @@ def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
         mannschaft=(f.get("Mannschaft") or "").strip(),
         sichtbarkeit=sicht, beschreibung=(f.get("Beschreibung") or "").strip(),
         auch_feiertags=bool(f.get("Auch an Feiertagen")),
+        zielgruppe=zielgruppe_fuer((f.get("Zielgruppe") or "").strip(), (f.get("Mannschaft") or "").strip()),
         # "Notiz intern" und "Eingereicht von" werden bewusst nie gelesen
     )
 
@@ -487,6 +499,7 @@ def externe_termine(feeds: list, tz: ZoneInfo) -> list[Termin]:
                     ganztaegig=isinstance(start, date) and not isinstance(start, datetime),
                     wiederholung="", ort=ical_text(felder.get("LOCATION", ":").partition(":")[2]).strip(),
                     abteilung=abteilung, kategorie="Spiel", mannschaft=mannschaft, sichtbarkeit="oeffentlich",
+                    zielgruppe=zielgruppe_fuer("", mannschaft),
                     beschreibung=", ".join(teile[1:] + ["Quelle: BFV"])))
     if termine:
         print(f"extern      {len(termine)} Spiele aus BFV-Feeds")

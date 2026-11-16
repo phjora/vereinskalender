@@ -43,6 +43,7 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 # inkl_hauptverein
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
 # ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
+# zielgruppen / ohne_zielgruppen  nach Zielgruppe (Jugend, Erwachsene, Alle) ein- bzw. ausschließen
 # gruppe         Überschrift, unter der der Kalender auf der Website steht
 # kompakt        true = als schmale Mannschaftszeile statt als Karte
 # externe_feeds  z. B. iCal-Links aus der BFV-App ("iCal Export")
@@ -66,6 +67,18 @@ sichtbarkeit = ["oeffentlich"]
 abteilungen = ["Hauptverein"]
 
 [[feed]]
+id = "jugend"
+gruppe = "Ganzer Verein"
+name = "TSV Großhadern – Jugend"
+beschreibung = "Alles für die Jugend aus allen Abteilungen – ohne Trainings."
+zugang = "oeffentlich"
+sichtbarkeit = ["oeffentlich"]
+zielgruppen = ["Jugend"]
+ohne_zielgruppen = ["Erwachsene"]
+ohne_kategorien = ["Training"]
+inkl_hauptverein = true
+
+[[feed]]
 id = "fussball"
 gruppe = "Fußball"
 name = "TSV Großhadern – Fußball"
@@ -83,9 +96,9 @@ beschreibung = "Turniere, Festivals und Veranstaltungen der Fußballjugend."
 zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 abteilungen = ["Fußball"]
-# Jugendtermine ODER Termine einer Jugendmannschaft – aber ohne die vielen Trainings
-kategorien = ["Jugend"]
-mannschaften = ["Bambini", "U8", "U9", "U10", "U11", "U12", "U13", "U14", "U15", "U17", "U19"]
+# Alles mit Zielgruppe Jugend (Jugendmannschaften zählen automatisch dazu) – ohne die vielen Trainings
+zielgruppen = ["Jugend"]
+ohne_zielgruppen = ["Erwachsene"]
 ohne_kategorien = ["Training"]
 inkl_hauptverein = true
 
@@ -99,6 +112,7 @@ zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U9"]
 inkl_hauptverein = true
+ohne_zielgruppen = ["Erwachsene"]
 externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/011MICV7L8000000VTVG0001VTR8C1K7"]   # BFV-Spiele U9
 
 [[feed]]
@@ -111,6 +125,7 @@ zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U17"]
 inkl_hauptverein = true
+ohne_zielgruppen = ["Erwachsene"]
 externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/02TPR2ED9K000000VS5489BRVSS9M1SM"]   # BFV-Spiele U17
 
 [[feed]]
