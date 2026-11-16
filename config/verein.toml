@@ -43,11 +43,14 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 # inkl_hauptverein
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
 # ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
+# gruppe         Überschrift, unter der der Kalender auf der Website steht
+# kompakt        true = als schmale Mannschaftszeile statt als Karte
 # externe_feeds  z. B. iCal-Links aus der BFV-App ("iCal Export")
 # ---------------------------------------------------------------------------
 
 [[feed]]
 id = "alle"
+gruppe = "Ganzer Verein"
 name = "TSV Großhadern – Alle Termine"
 beschreibung = "Alle öffentlichen Termine aller Abteilungen."
 zugang = "oeffentlich"
@@ -55,6 +58,7 @@ sichtbarkeit = ["oeffentlich"]
 
 [[feed]]
 id = "hauptverein"
+gruppe = "Ganzer Verein"
 name = "TSV Großhadern – Verein"
 beschreibung = "Vereinsweite Termine: Feste, Mitgliederversammlung, Aktionen."
 zugang = "oeffentlich"
@@ -63,6 +67,7 @@ abteilungen = ["Hauptverein"]
 
 [[feed]]
 id = "fussball"
+gruppe = "Fußball"
 name = "TSV Großhadern – Fußball"
 beschreibung = "Alle öffentlichen Termine der Fußballabteilung."
 zugang = "oeffentlich"
@@ -72,6 +77,7 @@ inkl_hauptverein = true
 
 [[feed]]
 id = "fussball-jugend"
+gruppe = "Fußball"
 name = "TSV Großhadern – Fußballjugend"
 beschreibung = "Turniere, Festivals und Veranstaltungen der Fußballjugend."
 zugang = "oeffentlich"
@@ -85,6 +91,8 @@ inkl_hauptverein = true
 
 [[feed]]
 id = "u9"
+gruppe = "Fußball"
+kompakt = true   # als Mannschaftszeile anzeigen
 name = "TSV Großhadern – U9"
 beschreibung = "Spiele, Trainings und Vereinstermine der U9 in einem Kalender."
 zugang = "oeffentlich"
@@ -95,6 +103,8 @@ externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanen
 
 [[feed]]
 id = "u17"
+gruppe = "Fußball"
+kompakt = true
 name = "TSV Großhadern – U17"
 beschreibung = "Spiele, Trainings und Vereinstermine der U17 in einem Kalender."
 zugang = "oeffentlich"
@@ -105,6 +115,7 @@ externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanen
 
 [[feed]]
 id = "judo"
+gruppe = "Judo"
 name = "TSV Großhadern – Judo"
 beschreibung = "Öffentliche Termine der Judoabteilung."
 zugang = "oeffentlich"

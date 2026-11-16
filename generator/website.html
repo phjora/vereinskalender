@@ -24,7 +24,16 @@
   .hinweis { color: var(--leise); font-size: 14px; margin: -4px 0 16px; }
   .feeds { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
   .feed { border: 1px solid var(--linie); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .feed h3 { margin: 0; font-size: 16px; }
+  .feed h4 { margin: 0; font-size: 16px; }
+  .gruppe { margin-bottom: 22px; }
+  .gruppenname { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--leise); margin: 18px 0 8px; }
+  .teams { margin-top: 10px; border: 1px solid var(--linie); border-radius: 12px; overflow: hidden; }
+  .teamskopf { background: var(--flaeche); padding: 10px 16px; font-weight: 600; font-size: 14px; }
+  .teamskopf span { font-weight: 400; color: var(--leise); }
+  .team { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; border-top: 1px solid var(--linie); }
+  .teamname { font-weight: 700; font-size: 16px; min-width: 56px; color: var(--akzent); }
+  .team .knoepfe { margin-left: auto; }
+  .team .qr { flex-basis: 100%; }
   .feed p { margin: 0; color: var(--leise); font-size: 14px; flex: 1; }
   .knoepfe { display: flex; flex-wrap: wrap; gap: 6px; }
   .knopf { border: 1px solid var(--akzent); background: var(--akzent); color: #fff; border-radius: 8px; padding: 7px 12px; font-size: 14px; text-decoration: none; cursor: pointer; font-family: inherit; }
@@ -128,7 +137,7 @@
 
   <h2 id="abo">Kalender abonnieren</h2>
   <p class="hinweis">Einmal abonnieren – neue und geänderte Termine erscheinen automatisch in deinem Handy- oder PC-Kalender.</p>
-  <div class="feeds" id="feeds"></div>
+  <div id="feeds"></div>
 
   <details>
     <summary>So klappt das Abo auf dem iPhone / iPad / Mac</summary>
@@ -171,18 +180,40 @@ const webcalUrl = p => httpsUrl(p).replace(/^https?:\/\//, 'webcal://');
 
 function feedsZeichnen() {
   const box = document.getElementById('feeds');
-  box.innerHTML = DATEN.feeds.map(f => `
-    <div class="feed">
-      <h3>${esc(f.name.replace(/^.*? – /, ''))}</h3>
-      <p>${esc(f.beschreibung)}</p>
-      <div class="knoepfe">
+  const kurz = n => n.replace(/^.*? – /, '');
+  const knoepfe = f => `
         <a class="knopf" href="${esc(webcalUrl(f.pfad))}">Abonnieren</a>
         <a class="knopf zweit" target="_blank" rel="noopener" href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl(f.pfad))}">Google</a>
         <button class="knopf zweit" data-kopie="${esc(httpsUrl(f.pfad))}">Link kopieren</button>
-        <button class="knopf zweit" data-qr="${esc(f.id)}">QR</button>
+        <button class="knopf zweit" data-qr="${esc(f.id)}">QR</button>`;
+  const qr = f => `<div class="qr" id="qr-${esc(f.id)}"><small>${esc(httpsUrl(f.pfad))}</small></div>`;
+  const gruppen = [];
+  DATEN.feeds.forEach(f => {
+    let g = gruppen.find(x => x.name === f.gruppe);
+    if (!g) gruppen.push(g = {name: f.gruppe, karten: [], teams: []});
+    (f.kompakt ? g.teams : g.karten).push(f);
+  });
+  box.innerHTML = gruppen.map(g => `
+    <section class="gruppe">
+      <h3 class="gruppenname">${esc(g.name)}</h3>
+      <div class="feeds">${g.karten.map(f => `
+        <div class="feed">
+          <h4>${esc(kurz(f.name))}</h4>
+          <p>${esc(f.beschreibung)}</p>
+          <div class="knoepfe">${knoepfe(f)}</div>
+          ${qr(f)}
+        </div>`).join('')}
       </div>
-      <div class="qr" id="qr-${esc(f.id)}"><small>${esc(httpsUrl(f.pfad))}</small></div>
-    </div>`).join('');
+      ${g.teams.length ? `<div class="teams">
+        <div class="teamskopf">Mannschaften <span>– Spiele, Trainings und Vereinstermine in einem Kalender</span></div>
+        ${g.teams.map(f => `
+          <div class="team">
+            <div class="teamname">${esc(kurz(f.name))}</div>
+            <div class="knoepfe">${knoepfe(f)}</div>
+            ${qr(f)}
+          </div>`).join('')}
+      </div>` : ''}
+    </section>`).join('');
   box.addEventListener('click', e => {
     const k = e.target.closest('[data-kopie]');
     if (k) {

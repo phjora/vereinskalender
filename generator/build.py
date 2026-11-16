@@ -77,6 +77,8 @@ class Feed:
     inkl_hauptverein: bool = False
     externe_feeds: list[str] = field(default_factory=list)
     ohne_kategorien: list[str] = field(default_factory=list)
+    gruppe: str = ""
+    kompakt: bool = False
 
     def passt(self, t: Termin) -> bool:
         if t.sichtbarkeit not in self.sichtbarkeit:
@@ -620,7 +622,8 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
     abteilungen = sorted({t.abteilung for t in oeff if t.abteilung})
 
     feed_daten = [{"id": f.id, "name": f.name, "beschreibung": f.beschreibung,
-                   "pfad": f"{f.id}.ics"} for f in feeds if f.zugang == "oeffentlich"]
+                   "pfad": f"{f.id}.ics", "gruppe": f.gruppe or "Weitere Kalender",
+                   "kompakt": f.kompakt} for f in feeds if f.zugang == "oeffentlich"]
     daten = {
         "basis": basis, "feeds": feed_daten, "abteilungen": abteilungen,
         "termine": [termin_json(t) for t in einzel],
