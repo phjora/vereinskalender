@@ -127,6 +127,7 @@ sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U9"]
 inkl_hauptverein = true
 ohne_zielgruppen = ["Erwachsene"]
+inkl_abteilung = ["Fußball"]   # z. B. Weihnachtsfeier der Fußballjugend
 externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/011MICV7L8000000VTVG0001VTR8C1K7"]   # BFV-Spiele U9
 
 [[feed]]
@@ -140,6 +141,7 @@ sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U17"]
 inkl_hauptverein = true
 ohne_zielgruppen = ["Erwachsene"]
+inkl_abteilung = ["Fußball"]   # z. B. Weihnachtsfeier der Fußballjugend
 externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/02TPR2ED9K000000VS5489BRVSS9M1SM"]   # BFV-Spiele U17
 
 [[feed]]

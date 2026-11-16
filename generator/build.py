@@ -83,6 +83,7 @@ class Feed:
     kompakt: bool = False
     zielgruppen: list[str] = field(default_factory=list)
     ohne_zielgruppen: list[str] = field(default_factory=list)
+    inkl_abteilung: list[str] = field(default_factory=list)  # abteilungsweite Termine ohne Mannschaft
 
     def passt(self, t: Termin) -> bool:
         if t.sichtbarkeit not in self.sichtbarkeit:
@@ -90,6 +91,8 @@ class Feed:
         if t.zielgruppe and t.zielgruppe in self.ohne_zielgruppen:
             return False
         if self.inkl_hauptverein and t.abteilung == "Hauptverein" and t.kategorie != "Gremium":
+            return True
+        if t.abteilung in self.inkl_abteilung and not t.mannschaft and t.kategorie != "Gremium":
             return True
         if self.abteilungen and t.abteilung not in self.abteilungen:
             return False
