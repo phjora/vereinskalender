@@ -83,6 +83,7 @@ class Feed:
     kompakt: bool = False
     zielgruppen: list[str] = field(default_factory=list)
     ohne_zielgruppen: list[str] = field(default_factory=list)
+    jahrgang: int = 0
     inkl_abteilung: list[str] = field(default_factory=list)  # abteilungsweite Termine ohne Mannschaft
 
     def passt(self, t: Termin) -> bool:
@@ -653,7 +654,7 @@ def schreibe_website(cfg: dict, feeds: list[Feed], termine: list[Termin], basis:
 
     feed_daten = [{"id": f.id, "name": f.name, "beschreibung": f.beschreibung,
                    "pfad": f"{f.id}.ics", "gruppe": f.gruppe or "Weitere Kalender",
-                   "kompakt": f.kompakt,
+                   "kompakt": f.kompakt, "jahrgang": f.jahrgang,
                    "art": ("mannschaft" if f.kompakt else "abteilung" if len(f.abteilungen) == 1
                            and f.abteilungen[0] != "Hauptverein" and not f.zielgruppen and not f.mannschaften
                            else "verein" if f.abteilungen == ["Hauptverein"] else "")}
@@ -751,6 +752,7 @@ def main() -> None:
         zugaenge = {"Demo-Zugang": {"token": demo, "feeds": ["vorstand", "hauptverein"]}}
         warnung("VK_INTERN_TOKENS nicht gesetzt – es wird ein Demo-Zugang erzeugt")
     nach_id = {f.id: f for f in feeds}
+    nach_name = {f.name.split(" – ")[-1].lower(): f for f in feeds}
     links = []
     for person, z in zugaenge.items():
         tok = z["token"]
@@ -758,9 +760,14 @@ def main() -> None:
             fehler(f"Token von '{person}' zu kurz oder ungültig (mind. 16 Zeichen, A-Z a-z 0-9 _ -)")
         teile = []
         for fid in z.get("feeds", ["intern"]):
-            if fid not in nach_id:
-                fehler(f"Zugang '{person}': Kalender '{fid}' existiert nicht")
-            teile.append(nach_id[fid])
+            # Kennung (z. B. "2018-1") oder aktueller Kurzname (z. B. "u9")
+            f_ = nach_id.get(fid) or nach_name.get(fid.lower())
+            if not f_:
+                warnung(f"Zugang '{person}': Kalender '{fid}' existiert nicht – übersprungen")
+                continue
+            teile.append(f_)
+        if not teile:
+            continue
         # Ein persönlicher Kalender pro Person: alles Gewählte in einem, jeder Termin nur einmal
         kf = KombiFeed(teile)
         n = schreibe_ics(OUT / "i" / tok / "kalender.ics", kf, termine, cfg, stempel)

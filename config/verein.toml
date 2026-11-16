@@ -58,6 +58,8 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
 # ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
 # zielgruppen / ohne_zielgruppen  nach Zielgruppe (Jugend, Erwachsene, Alle) ein- bzw. ausschließen
+# Mannschaften: id = Jahrgang-Nummer (z. B. "2018-1"). Zum Saisonwechsel nur name und
+#                mannschaften hochzählen (U9 -> U10) – Abo-Links und QR-Codes bleiben gültig.
 # gruppe         Überschrift, unter der der Kalender auf der Website steht
 # kompakt        true = als schmale Mannschaftszeile statt als Karte
 # externe_feeds  z. B. iCal-Links aus der BFV-App ("iCal Export")
@@ -117,7 +119,8 @@ ohne_kategorien = ["Training"]
 inkl_hauptverein = true
 
 [[feed]]
-id = "u9"
+id = "2018-1"     # feste Kennung nach Jahrgang – bleibt über alle Saisons gleich
+jahrgang = 2018
 gruppe = "Fußball"
 kompakt = true   # als Mannschaftszeile anzeigen
 name = "TSV Großhadern – U9"
@@ -131,7 +134,8 @@ inkl_abteilung = ["Fußball"]   # z. B. Weihnachtsfeier der Fußballjugend
 externe_feeds = ["https://service.bfv.de/rest/icsexport/teammatches/teamPermanentId/011MICV7L8000000VTVG0001VTR8C1K7"]   # BFV-Spiele U9
 
 [[feed]]
-id = "u17"
+id = "2010-1"     # feste Kennung nach Jahrgang – bleibt über alle Saisons gleich
+jahrgang = 2010
 gruppe = "Fußball"
 kompakt = true
 name = "TSV Großhadern – U17"

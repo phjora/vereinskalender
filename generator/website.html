@@ -270,7 +270,7 @@ function feedsZeichnen() {
   const gewaehlt = new Set();
   const rollenBox = document.getElementById('rollen'), schritt = document.getElementById('wschritt'), ergebnis = document.getElementById('kombiergebnis');
   const chips = liste => `<div class="filter" style="margin-top:0">${liste.map(f =>
-    `<button class="chip ${gewaehlt.has(f.id) ? 'aktiv' : ''}" data-k="${esc(f.id)}">${esc(kurz(f.name))}</button>`).join('')}</div>`;
+    `<button class="chip ${gewaehlt.has(f.id) ? 'aktiv' : ''}" data-k="${esc(f.id)}">${esc(kurz(f.name))}${f.jahrgang ? ` <small style="opacity:.75">· Jg. ${f.jahrgang}</small>` : ''}</button>`).join('')}</div>`;
   const abfrageZeichnen = () => {
     rollenBox.innerHTML = ROLLEN.map(r => `<button class="rolle ${rolle === r.id ? 'aktiv' : ''}" data-rolle="${r.id}">${esc(r.name)}<small>${esc(r.info)}</small></button>`).join('');
     ergebnis.innerHTML = '';
