@@ -260,7 +260,7 @@ def feiertage(jahr: int, cfg: dict) -> dict:
 
 
 def wende_feiertage_an(termine: list[Termin], cfg: dict) -> int:
-    """Regelmäßige Trainings entfallen an Feiertagen (ohne 'Abgesagt'-Eintrag)."""
+    """Regelmäßige Trainings werden an Feiertagen als abgesagt markiert."""
     kategorien = set(cfg.get("feiertage", {}).get("kategorien", ["Training"]))
     n = 0
     for t in termine:
@@ -274,7 +274,7 @@ def wende_feiertage_an(termine: list[Termin], cfg: dict) -> int:
         for s_ in vorkommen(t, erster, bis):
             tag_ = s_.date() if isinstance(s_, datetime) else s_
             if tag_ in alle:
-                t.ausnahmen.add(tag_)
+                t.absagen.setdefault(tag_, f"Feiertag ({alle[tag_]})")
                 n += 1
     return n
 
@@ -394,7 +394,7 @@ def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
         f"DTSTAMP:{stempel}",
         zeitfeld("DTSTART", t.start, tzname),
         zeitfeld("DTEND", t.ende, tzname),
-        f"SUMMARY:{esc(('Abgesagt: ' if einzel_abgesagt else '') + t.titel)}",
+        f"SUMMARY:{esc(t.titel)}",  # Absage steckt in STATUS:CANCELLED
     ]
     if t.wiederholung:
         zeilen.append(f"RRULE:{t.wiederholung}")
@@ -421,7 +421,7 @@ def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
             e = s + (t.ende - t.start)
             zeilen += ["BEGIN:VEVENT", f"UID:{t.id}@{slug}", f"DTSTAMP:{stempel}",
                        zeitfeld("RECURRENCE-ID", s, tzname), zeitfeld("DTSTART", s, tzname),
-                       zeitfeld("DTEND", e, tzname), f"SUMMARY:{esc('Abgesagt: ' + t.titel)}",
+                       zeitfeld("DTEND", e, tzname), f"SUMMARY:{esc(t.titel)}",
                        f"DESCRIPTION:{esc(absage_text(grund, t.beschreibung))}",
                        "STATUS:CANCELLED", "TRANSP:TRANSPARENT"]
             if t.ort:
@@ -712,14 +712,14 @@ def main() -> None:
     at_token, at_base = os.environ.get("AIRTABLE_TOKEN"), os.environ.get("AIRTABLE_BASE")
     if at_token and at_base:
         termine = lade_airtable(tz, at_token, at_base, os.environ.get("AIRTABLE_TABELLE", "Termine"))
-        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen ausgelassen")
+        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen abgesagt")
         ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle",
                                       "IS_AFTER({Datum}, DATEADD(TODAY(), -60, 'days'))")
         print(f"airtable    {len(ausfaelle)} Ausfälle ({n} API-Abrufe), "
               f"{wende_ausfaelle_an(termine, ausfaelle)} Termine als abgesagt markiert")
     else:
         termine = lade_termine(tz)
-        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen ausgelassen")
+        print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen abgesagt")
     termine += externe_termine(feeds, tz)
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
