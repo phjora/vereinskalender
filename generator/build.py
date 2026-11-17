@@ -406,6 +406,7 @@ def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
     if t.ort:
         zeilen.append(f"LOCATION:{esc(t.ort)}")
     if einzel_abgesagt:
+        zeilen += ["STATUS:CANCELLED", "TRANSP:TRANSPARENT"]
         zeilen.append(f"DESCRIPTION:{esc(absage_text(t.absagen[erster], t.beschreibung))}")
     elif t.beschreibung:
         zeilen.append(f"DESCRIPTION:{esc(t.beschreibung)}")
@@ -421,7 +422,8 @@ def vevent(t: Termin, slug: str, tzname: str, stempel: str) -> list[str]:
             zeilen += ["BEGIN:VEVENT", f"UID:{t.id}@{slug}", f"DTSTAMP:{stempel}",
                        zeitfeld("RECURRENCE-ID", s, tzname), zeitfeld("DTSTART", s, tzname),
                        zeitfeld("DTEND", e, tzname), f"SUMMARY:{esc('Abgesagt: ' + t.titel)}",
-                       f"DESCRIPTION:{esc(absage_text(grund, t.beschreibung))}"]
+                       f"DESCRIPTION:{esc(absage_text(grund, t.beschreibung))}",
+                       "STATUS:CANCELLED", "TRANSP:TRANSPARENT"]
             if t.ort:
                 zeilen.append(f"LOCATION:{esc(t.ort)}")
             zeilen.append("END:VEVENT")
