@@ -40,7 +40,9 @@ Es gibt keinen Server. Alles wird vorab als Datei erzeugt und statisch ausgelief
 | `generator/qrcode.js` | QR-Code-Bibliothek, lokal eingebunden (kein CDN) |
 | `generator/neuer_zugang.py` | erzeugt einen Eintrag für einen persönlichen Zugang |
 | `data/termine.csv` | nur Reserve und Beispieldaten, wenn kein Airtable-Zugang gesetzt ist |
-| `.github/workflows/kalender.yml` | baut und veröffentlicht |
+| `tests/` | automatische Prüfungen für Kalenderfilter, Feiertage und Absagen |
+| `.github/workflows/kalender.yml` | testet, baut und veröffentlicht |
+| `.github/workflows/tests.yml` | prüft Pull Requests (Tests und Probe-Build), veröffentlicht nichts |
 | `public/`, `build/` | Ausgabe, nicht im Repository (`.gitignore`) |
 
 ## Termine: Quelle Airtable
@@ -172,9 +174,16 @@ Bekannt:
 ## Lokal bauen und testen
 
 ```bash
+python -m unittest discover tests              # automatische Tests, dauert unter einer Sekunde
 python generator/build.py                      # ohne Secrets: Beispieldaten aus data/termine.csv
 cd public && python -m http.server 8000        # http://localhost:8000
 ```
+
+Die Tests in `tests/` arbeiten nur mit erfundenen Terminen, ohne Netz und ohne Airtable. Sie prüfen
+die Filterregeln einzeln, die Kalender aus `config/verein.toml` (welcher Termin landet wo),
+Feiertage, Ausfälle und die iCal-Ausgabe abgesagter Termine. Sie laufen bei jedem Pull Request und
+vor jeder Veröffentlichung; schlägt einer fehl, bleibt der bisherige Stand online. Wer eine Regel
+oder einen Kalender bewusst ändert, passt den zugehörigen Test im selben Schritt an.
 
 Mit echten Daten: `AIRTABLE_TOKEN` und `AIRTABLE_BASE` als Umgebungsvariablen setzen. Die
 persönlichen Links stehen nach dem Build in `build/intern-links.txt` (wird nicht veröffentlicht).
