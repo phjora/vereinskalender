@@ -1,7 +1,10 @@
 """Einlesen aus Airtable: aus einem Datensatz wird ein Termin (airtable_termin)."""
 import contextlib
 import io
+import json
 import unittest
+import urllib.parse
+from unittest import mock
 from datetime import date, timedelta
 
 from hilfen import TZ, build
@@ -85,6 +88,46 @@ class Felder(unittest.TestCase):
     def test_ohne_titel_oder_beginn_uebersprungen(self):
         self.assertIsNone(lies(Titel="")[0])
         self.assertIsNone(lies(Beginn=None)[0])
+
+
+class Antwort:
+    """Ersatz für die Antwort von Airtable, damit die Tests ohne Netz laufen."""
+    def __init__(self, daten):
+        self.daten = daten
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return json.dumps(self.daten).encode()
+
+
+class AusfaelleLesen(unittest.TestCase):
+    def test_alle_seiten_werden_gelesen(self):
+        seiten = [Antwort({"records": [{"id": "rec1"}], "offset": "weiter"}), Antwort({"records": [{"id": "rec2"}]})]
+        with mock.patch.object(build.urllib.request, "urlopen", side_effect=seiten) as abruf:
+            records, anfragen = build.airtable_abruf("token", "appX", "Ausfälle", build.AUSFALL_FORMEL)
+        self.assertEqual([r["id"] for r in records], ["rec1", "rec2"])
+        self.assertEqual(anfragen, 2)
+        url = urllib.parse.unquote_plus(abruf.call_args_list[0].args[0].full_url)
+        self.assertIn(build.AUSFALL_FORMEL, url)
+
+    def test_filter_richtet_sich_nach_dem_letzten_ausfalltag(self):
+        # Ein langer Ausfall zählt, solange sein letzter Tag ("Bis") noch im Fenster liegt
+        self.assertIn("IF({Bis}, {Bis}, {Datum})", build.AUSFALL_FORMEL)
+        self.assertIn("-60", build.AUSFALL_FORMEL)
+
+    def test_nicht_lesbar_bricht_den_build_ab(self):
+        # Lieber der alte Stand bleibt online als ein Kalender ohne Absagen
+        log = io.StringIO()
+        with mock.patch.object(build.urllib.request, "urlopen", side_effect=OSError("kein Netz")), \
+                contextlib.redirect_stderr(log), self.assertRaises(SystemExit):
+            build.airtable_abruf("token", "appX", "Ausfälle", build.AUSFALL_FORMEL)
+        self.assertIn("FEHLER", log.getvalue())
+        self.assertNotIn("token", log.getvalue())
 
 
 if __name__ == "__main__":
