@@ -63,6 +63,15 @@ IDs: Base `appWarqQIpadIrt7W`, Termine `tblxiEBXMwyz8Nh4H`, Ausfälle `tblI2kDv3
 Auswahloptionen (z. B. neue Abteilung) lassen sich über die API nicht ändern, nur per
 `typecast` beim Anlegen eines Datensatzes erzeugen.
 
+## Wer den Kalender sonst noch liest
+
+Ein weiteres Skript außerhalb dieses Repositorys wertet die Mannschaftskalender aus und zählt
+dabei jedes Training, das nicht `STATUS:CANCELLED` ist. Daraus folgt:
+
+- Absagen müssen rückwirkend im Feed bleiben, mindestens ein Quartal. Deshalb liest der Generator
+  Ausfälle der letzten 200 Tage (`AUSFALL_FORMEL`). Nicht wieder verkürzen.
+- Kategorie `Training` in `CATEGORIES`, Feed-IDs und UIDs nicht ändern.
+
 ## Offene Punkte
 
 Vor dem Start mit weiteren Personen:
@@ -87,8 +96,10 @@ Technik:
 - Das Formular „Termin absagen“ kennt nur Mannschaft und Tag und sagt damit nur Trainings ab.
   Turniere, Elternabende und Ähnliches gehen über die Tabelle oder das Interface (Feld „Termin“).
   Das Feld nicht ins Formular nehmen: Die Auswahl würde auch Titel interner Termine zeigen.
-- Tests decken `Feed.passt`, Feiertage, Absagen und das Einlesen aus Airtable ab. Noch ohne Tests:
-  BFV-Umwandlung, persönliche Zugänge, Website.
+- Tests decken `Feed.passt`, Feiertage, Absagen, das Einlesen aus Airtable und die BFV-Umwandlung ab.
+  Noch ohne Tests: persönliche Zugänge, Website.
+- Der BFV-Feed enthält nur kommende Spiele. Gespielte fallen danach aus dem Kalender. Idee: beim Build
+  die zuletzt veröffentlichte Datei (oder ein Archiv) einlesen und vergangene BFV-Spiele behalten.
 
 Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
 
