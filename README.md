@@ -105,6 +105,7 @@ welche Stufen er enthält. Öffentliche Feeds enthalten nur `oeffentlich`.
 
 **Feiertage.** Serien der Kategorie Training werden an gesetzlichen Feiertagen in Bayern sowie am
 24.12. und 31.12. als abgesagt markiert, nicht gelöscht. Ausnahme: Häkchen „Auch an Feiertagen“.
+Berücksichtigt wird alles vom Beginn der Serie bis 800 Tage in die Zukunft.
 Schulferien werden bewusst nicht berücksichtigt.
 
 **Absagen.** Abgesagte Termine bleiben im Kalender, mit `STATUS:CANCELLED` und

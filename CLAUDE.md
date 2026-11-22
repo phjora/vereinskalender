@@ -87,7 +87,6 @@ Technik:
 
 Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
 
-- Feiertagsregel rechnet nur 800 Tage ab Serienbeginn.
 - Ausfälle, die vor mehr als 60 Tagen begannen und noch laufen, werden nicht gelesen.
 - Doppelbelegung prüft nur Einzeltermine, keine Serien.
 - Dauer ohne Ende: 90 Minuten bei Airtable, 60 bei der CSV.
