@@ -1,87 +1,196 @@
 # Vereinskalender
 
 Ein zentraler, abonnierbarer Vereinskalender (iCal). Termine werden an einer Stelle gepflegt,
-ein Skript erzeugt daraus automatisch alle Kalender – öffentliche für die Website und
-persönliche, sperrbare Links für interne Kalender.
+ein Skript erzeugt daraus alle Kalender und eine Website: öffentliche Kalender zum Abonnieren
+und persönliche, sperrbare Links für interne Termine.
 
 Erster Einsatz: TSV München-Großhadern. Alles Vereinsspezifische steht in `config/verein.toml`,
-damit das System auch für andere Vereine genutzt werden kann.
+damit das System später auch für andere Vereine genutzt werden kann.
 
-## Aufbau
+- Website: https://phjora.github.io/vereinskalender/
+- Status: Prototyp. Der Vorstand hat noch nicht freigegeben, Formulare und Interface in Airtable
+  sind deshalb noch nicht veröffentlicht.
+
+## So hängt alles zusammen
+
+```
+Airtable (Termine, Ausfälle)          BFV (iCal-Export je Mannschaft)
+        │  API, nur lesend                    │
+        └──────────────┬──────────────────────┘
+                       ▼
+        generator/build.py  (GitHub Actions)
+                       ▼
+        public/  →  GitHub Pages
+          index.html                 Website mit Kalender, Abo-Knöpfen, QR-Codes
+          <feed>.ics                 öffentliche Kalender
+          kombi/<id>_<id>.ics        Kombi-Kalender (mehrere in einem Abo)
+          i/<token>/kalender.ics     persönliche Kalender (geheimer Link)
+```
+
+Es gibt keinen Server. Alles wird vorab als Datei erzeugt und statisch ausgeliefert.
+
+## Aufbau des Repositorys
 
 | Pfad | Inhalt |
 | --- | --- |
-| `config/verein.toml` | Verein, Farben, Kalender (Feeds) mit Sichtbarkeit und Filtern |
-| `data/termine.csv` | Termine – eine Zeile pro Termin |
-| `generator/build.py` | erzeugt `public/*.ics`, interne Kalender und die Website |
-| `generator/website.html` | Vorlage der Website |
-| `generator/neuer_zugang.py` | erzeugt einen persönlichen Zugang für interne Kalender |
-| `.github/workflows/kalender.yml` | baut und veröffentlicht bei jeder Änderung und stündlich |
+| `config/verein.toml` | Verein, Farben, Feiertagsregel, Kombi-Einstellung, alle Kalender (Feeds) |
+| `generator/build.py` | der Generator, nur Python-Standardbibliothek (ab 3.11, im Workflow 3.12) |
+| `generator/website.html` | Vorlage der Website (HTML, CSS und JavaScript in einer Datei) |
+| `generator/logo.svg` | Vereinslogo, nutzt `currentColor` |
+| `generator/qrcode.js` | QR-Code-Bibliothek, lokal eingebunden (kein CDN) |
+| `generator/neuer_zugang.py` | erzeugt einen Eintrag für einen persönlichen Zugang |
+| `data/termine.csv` | nur Reserve und Beispieldaten, wenn kein Airtable-Zugang gesetzt ist |
+| `.github/workflows/kalender.yml` | baut und veröffentlicht |
+| `public/`, `build/` | Ausgabe, nicht im Repository (`.gitignore`) |
 
-Nur Python-Standardbibliothek (ab 3.11), keine Installation nötig.
+## Termine: Quelle Airtable
 
-## Termine pflegen mit Airtable (empfohlen)
+Base „Vereinskalender TSV Großhadern“ (`appWarqQIpadIrt7W`). Sind die Secrets `AIRTABLE_TOKEN`
+und `AIRTABLE_BASE` gesetzt, liest der Generator aus Airtable, sonst aus der CSV.
 
-Base „Vereinskalender TSV Großhadern“, Tabelle „Termine“. Eingabe über das Formular
-„Termin eintragen“ oder direkt in der Tabelle; Freigabe über die Interface-Seite „Zur Freigabe“.
-Nur Termine mit Status **Freigegeben** landen im Kalender. „Notiz intern“ und „Eingereicht von“
-werden nie veröffentlicht.
+### Tabelle „Termine“ (`tblxiEBXMwyz8Nh4H`)
 
-GitHub-Secrets: `AIRTABLE_TOKEN` (Personal Access Token, nur Lesezugriff `data.records:read`
-auf diese eine Base) und `AIRTABLE_BASE` (`appWarqQIpadIrt7W`). Sind sie gesetzt, liest der
-Generator aus Airtable statt aus der CSV. Abruf alle 3 Stunden (Gratis-Limit 1.000 Abrufe/Monat).
+Nur Datensätze mit **Status = Freigegeben** landen im Kalender.
 
-## Termine pflegen ohne Airtable (`data/termine.csv`)
+| Feld | Bedeutung |
+| --- | --- |
+| Titel, Beginn, Ende, Ganztägig | Ende fehlt oder liegt vor Beginn: 90 Minuten Dauer |
+| Wiederholung, Wiederholen bis | Serie; „Wiederholen bis“ gilt einschließlich dieses Tages |
+| Ort, Adresse | werden im Kalender zu einem Ort zusammengeführt |
+| Abteilung | `Hauptverein` = vereinsweit |
+| Kategorie | Training, Spiel, Gremium, Veranstaltung … |
+| Mannschaft | z. B. U9, U17; leer = abteilungsweit |
+| Zielgruppe | Alle / Jugend / Erwachsene. Leer bei Mannschaften wie „U9“ oder „Bambini“ zählt als Jugend |
+| Sichtbarkeit | Öffentlich / Trainer:innen / Intern / Vorstand |
+| Beschreibung | landet im Kalender, keine personenbezogenen Daten |
+| Auch an Feiertagen | Ausnahme von der Feiertagsregel |
+| Kalender jetzt aktualisieren | Häkchen löst einen Sofort-Neubau aus |
+| Notiz intern, Eingereicht von | werden **nie** gelesen oder veröffentlicht |
 
-| Spalte | Beispiel | Hinweis |
-| --- | --- | --- |
-| `id` | `u17-elternabend` | eindeutig und **nie ändern** – sonst entsteht beim Abonnenten ein doppelter Termin |
-| `titel` | Elternabend U17 | |
-| `start`, `ende` | 2026-11-19 19:00 | bei ganztägig nur das Datum |
-| `ganztaegig` | ja / nein | |
-| `wiederholung` | `FREQ=WEEKLY;BYDAY=WE;UNTIL=20261216T230000Z` | optional, iCal-Regel, in Anführungszeichen wenn Kommas vorkommen |
-| `ort` | Vereinsheim | wird auch für die Doppelbelegungsprüfung genutzt |
-| `abteilung` | Fußball, Judo, Hauptverein | `Hauptverein` = vereinsweit |
-| `kategorie` | Jugend, Training, Spiel, Gremium, Veranstaltung | |
-| `mannschaft` | U9, U17 | optional |
-| `sichtbarkeit` | oeffentlich / intern / vorstand | entscheidet, in welchen Kalendern der Termin landet |
-| `beschreibung` | kurzer Text | landet im Kalender – keine personenbezogenen Daten |
-| `notiz_intern` | | wird **nie** in einen Kalender übernommen |
+### Tabelle „Ausfälle“ (`tblI2kDv3CP8A8Sou`)
 
-## Lokal testen
+Felder: Was fällt aus, Datum, Bis (optional, einschließlich), Mannschaft, Termin (Verknüpfung), Grund,
+Abgesagt von. Ein Ausfall trifft alle Vorkommen im Zeitraum, die entweder zum verknüpften Termin
+gehören oder zur genannten Mannschaft. BFV-Spiele sind ausgenommen, die sagt der BFV selbst ab.
+Gelesen werden Ausfälle der letzten 60 Tage und alle künftigen.
 
-```bash
-python generator/build.py
-cd public && python -m http.server 8000   # dann http://localhost:8000 öffnen
+### Formulare, Interface, Automationen
+
+- Formulare „Termin eintragen“ und „Termin absagen“, Interface „Kalender-Verwaltung“
+  (Seiten: Zur Freigabe, Ausfälle, Kalender).
+- Drei Automationen legen im Repository ein Issue „Kalender aktualisieren …“ an: bei Freigabe,
+  per Häkchen, bei einer Absage. Das Issue startet den Workflow und wird danach geschlossen.
+
+### Grenzen des kostenlosen Airtable-Tarifs
+
+1.000 Datensätze je Base, 5 Bearbeiter, 1.000 API-Abrufe und 100 Automation-Läufe pro Monat.
+Ein Build braucht 2 Abrufe (Termine, Ausfälle), solange es unter 100 Termine sind. Deshalb läuft
+der geplante Abgleich nur alle 3 Stunden.
+
+## Regeln im Generator
+
+**Sichtbarkeit.** Vier Stufen: `oeffentlich`, `trainer`, `intern`, `vorstand`. Jeder Feed nennt,
+welche Stufen er enthält. Öffentliche Feeds enthalten nur `oeffentlich`.
+
+**Filter eines Feeds** (`Feed.passt` in `build.py`), in dieser Reihenfolge:
+
+1. Sichtbarkeit muss passen.
+2. `ohne_zielgruppen` schließt aus.
+3. `inkl_hauptverein`: vereinsweite Termine kommen dazu, außer Kategorie Gremium.
+4. `inkl_abteilung`: abteilungsweite Termine ohne Mannschaft kommen dazu, außer Gremium.
+5. `abteilungen` grenzt ein, `ohne_kategorien` schließt aus.
+6. `kategorien`, `mannschaften`, `zielgruppen`: Sind mehrere gesetzt, reicht ein Treffer.
+
+**Feiertage.** Serien der Kategorie Training werden an gesetzlichen Feiertagen in Bayern sowie am
+24.12. und 31.12. als abgesagt markiert, nicht gelöscht. Ausnahme: Häkchen „Auch an Feiertagen“.
+Schulferien werden bewusst nicht berücksichtigt.
+
+**Absagen.** Abgesagte Termine bleiben im Kalender, mit `STATUS:CANCELLED` und
+`TRANSP:TRANSPARENT`, bei Serien als Ausnahme mit `RECURRENCE-ID`. Der Titel bekommt kein eigenes
+Präfix, weil das iPhone sonst „ABGESAGT: Abgesagt: …“ zeigt. Der Grund steht in der Beschreibung.
+
+**BFV-Spiele.** Die iCal-Links aus der BFV-App („iCal Export“ bei der Mannschaft) stehen in
+`verein.toml` unter `externe_feeds`. Der Generator wandelt sie in normale Termine um (Kategorie
+Spiel, öffentlich, ID `bfv-<uid>`). Ist der BFV nicht erreichbar, läuft der Build trotzdem durch.
+
+**Mannschaftskalender.** Die Feed-ID ist Jahrgang plus Nummer, z. B. `2018-1` (U9) und `2010-1`
+(U17). Zum Saisonwechsel werden nur `name` und `mannschaften` hochgezählt, Abo-Links und QR-Codes
+bleiben gültig. Eine zweite Mannschaft desselben Jahrgangs bekommt `-2`.
+
+**Kombi-Kalender.** Für alle öffentlichen Feeds außer `alle` werden sämtliche Zweier- und
+Dreier-Kombinationen erzeugt: `public/kombi/<id>_<id>.ics`, IDs alphabetisch sortiert. Jeder Termin
+steht darin nur einmal. Aktuell 560 Dateien bei 16 Feeds; die Zahl wächst schnell mit jedem
+weiteren Feed (`[kombi] max` und `ohne` in der Konfiguration).
+
+**Termin-IDs.** Die UID im Kalender ist die Airtable-Record-ID. Sie darf sich nie ändern, sonst
+entsteht beim Abonnenten ein doppelter Termin.
+
+**Prüfung.** Der Build warnt bei Doppelbelegung eines Orts.
+
+## Persönliche Zugänge
+
+Interne Termine gibt es nur über persönliche Links. Das Secret `VK_INTERN_TOKENS` ist ein
+JSON-Objekt:
+
+```json
+{"Name": {"token": "mindestens-16-zeichen", "feeds": ["vorstand", "2018-1", "2010-1"]}}
 ```
 
-Die internen Links stehen danach in `build/intern-links.txt` (wird nicht veröffentlicht).
-
-## Interne Zugänge
+Pro Person entsteht genau ein Kalender unter `i/<token>/kalender.ics`, der alles Gewählte enthält,
+jeden Termin einmal. `feeds` nimmt Feed-IDs; die aktuellen Kurznamen (`u9`, `u17`) funktionieren als
+Alias, sind aber nicht saisonfest. Unbekannte Namen geben nur eine Warnung.
 
 ```bash
 python generator/neuer_zugang.py "Max Muster" intern
 ```
 
-Die Ausgabe in das GitHub-Secret `VK_INTERN_TOKENS` übernehmen (alle Personen in einem JSON-Objekt).
-Zugang sperren = Eintrag aus dem Secret löschen; beim nächsten Lauf ist der Link ungültig.
+Die Ausgabe in das Secret übernehmen. Sperren = Eintrag löschen, beim nächsten Build ist der Link
+tot. Die Bausteine `trainer`, `intern`, `vorstand` bauen aufeinander auf (siehe Konfiguration).
 
-## Veröffentlichen mit GitHub Pages (Prototyp)
+## Build und Veröffentlichung
 
-1. Repository anlegen und diesen Ordner hochladen.
-2. Settings → Pages → Source: **GitHub Actions**.
-3. Optional: Settings → Secrets and variables → Actions → `VK_INTERN_TOKENS` anlegen.
-4. Actions → „Kalender bauen und veröffentlichen“ → Run workflow.
+Workflow „Kalender bauen und veröffentlichen“, ein Job `bauen`. Auslöser:
 
-Die Kalender liegen danach unter `https://<konto>.github.io/<repo>/alle.ics` usw.
+| Auslöser | Zweck |
+| --- | --- |
+| `push` auf `main` | Änderungen an Code oder Konfiguration |
+| `schedule` (`17 */3 * * *`) | regelmäßiger Abgleich, vor allem für BFV-Verlegungen |
+| `workflow_dispatch` | manuell |
+| `issues: opened` | Sofort-Neubau aus Airtable; nur Issues des Repo-Besitzers mit Titel „Kalender aktualisieren…“ |
 
-**Wichtig:** Ein öffentliches Repository zeigt auch `data/termine.csv` mit allen internen Terminen.
-Für den Prototyp mit Beispieldaten ist das in Ordnung. Für den echten Betrieb entweder ein privates
-Repository mit Hosting bei Cloudflare Pages, oder die Termine aus einer geschützten Quelle
-(z. B. Airtable über API-Schlüssel) laden statt aus der CSV im Repository.
+Secrets (Settings → Secrets and variables → Actions): `AIRTABLE_TOKEN` (nur `data.records:read`
+auf diese eine Base), `AIRTABLE_BASE`, `VK_INTERN_TOKENS`. Die Tokens der persönlichen Links werden
+in den Logs maskiert.
 
-## BFV-Spiele einbinden
+Bekannt:
 
-In der BFV-App bei der Mannschaft den „iCal Export“ öffnen, Link kopieren und in
-`config/verein.toml` beim passenden Feed unter `externe_feeds` eintragen. Der Generator holt die
-Spiele bei jedem Lauf neu. Ist der BFV nicht erreichbar, läuft der Build trotzdem durch.
+- GitHub verzögert geplante Läufe bei kostenlosen Konten. In der Praxis läuft der Abgleich etwa
+  alle 9 Stunden statt alle 3. Sofort-Neubauten sind nicht betroffen.
+- Schlägt nur der Schritt `deploy-pages` fehl („No artifacts named github-pages“), ist das eine
+  Störung bei GitHub. Lauf neu starten, fertig.
+
+## Lokal bauen und testen
+
+```bash
+python generator/build.py                      # ohne Secrets: Beispieldaten aus data/termine.csv
+cd public && python -m http.server 8000        # http://localhost:8000
+```
+
+Mit echten Daten: `AIRTABLE_TOKEN` und `AIRTABLE_BASE` als Umgebungsvariablen setzen. Die
+persönlichen Links stehen nach dem Build in `build/intern-links.txt` (wird nicht veröffentlicht).
+Ohne `VK_INTERN_TOKENS` entsteht ein Demo-Zugang.
+
+## Datenschutz
+
+- Das Repository und die Seite sind öffentlich. Keine Tokens, keine echten internen Termine und
+  keine personenbezogenen Daten ins Repository schreiben, auch nicht in Beispiele oder Commits.
+- Bei Kindern nur Vornamen, und nur wenn es nötig ist.
+- Persönliche Links sind geheim, aber nicht passwortgeschützt: Wer den Link hat, sieht den Kalender.
+  Vor der Ausgabe an weitere Personen braucht es echte Zugänge (siehe offene Punkte in `CLAUDE.md`).
+
+## Für einen anderen Verein nutzen
+
+Neue `config/verein.toml` (Name, Slug, Farbe, Feeds), eigenes Logo, eigene Airtable-Base mit
+denselben Feldnamen, Secrets setzen, Pages auf „GitHub Actions“ stellen. Der Code bleibt gleich.
+Noch fest verdrahtet sind die bayerischen Feiertage, die Texte der Website und der Standard
+„Fußball“ als Abteilung für externe Feeds.
