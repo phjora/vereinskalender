@@ -119,7 +119,7 @@ bleiben gültig. Eine zweite Mannschaft desselben Jahrgangs bekommt `-2`.
 
 **Kombi-Kalender.** Für alle öffentlichen Feeds außer `alle` werden sämtliche Zweier- und
 Dreier-Kombinationen erzeugt: `public/kombi/<id>_<id>.ics`, IDs alphabetisch sortiert. Jeder Termin
-steht darin nur einmal. Aktuell 560 Dateien bei 16 Feeds; die Zahl wächst schnell mit jedem
+steht darin nur einmal. Aktuell 560 Dateien bei 15 kombinierbaren Feeds; die Zahl wächst schnell mit jedem
 weiteren Feed (`[kombi] max` und `ohne` in der Konfiguration).
 
 **Termin-IDs.** Die UID im Kalender ist die Airtable-Record-ID. Sie darf sich nie ändern, sonst
