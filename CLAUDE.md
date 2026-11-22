@@ -92,7 +92,6 @@ Technik:
 
 Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
 
-- Ausfälle, die vor mehr als 60 Tagen begannen und noch laufen, werden nicht gelesen.
 - Doppelbelegung prüft nur Einzeltermine, keine Serien.
 - Dauer ohne Ende: 90 Minuten bei Airtable, 60 bei der CSV.
 - Zu kurzer Token oder kaputtes JSON im Secret stoppt den Build.

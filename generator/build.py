@@ -213,7 +213,13 @@ def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Ter
     return termine
 
 
+# Ausfälle, deren letzter Tag ("Bis", sonst "Datum") höchstens 60 Tage zurückliegt, und alle künftigen.
+AUSFALL_FORMEL = "IS_AFTER(IF({Bis}, {Bis}, {Datum}), DATEADD(TODAY(), -60, 'days'))"
+
+
 def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[list[dict], int]:
+    """Liest alle Datensätze einer Tabelle, die zur Formel passen. Bricht ab, wenn das nicht gelingt:
+    Ohne die Ausfälle stünden abgesagte Termine wieder als stattfindend im Kalender."""
     from urllib.parse import quote, urlencode
     records, offset, anfragen = [], None, 0
     while True:
@@ -226,8 +232,7 @@ def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[li
             with urllib.request.urlopen(req, timeout=30) as r:
                 antwort = json.loads(r.read())
         except Exception as e:
-            warnung(f"Airtable-Tabelle '{tabelle}' nicht lesbar: {e}")
-            return records, anfragen
+            fehler(f"Airtable-Tabelle '{tabelle}' nicht lesbar: {e}")
         anfragen += 1
         records += antwort.get("records", [])
         offset = antwort.get("offset")
@@ -754,8 +759,7 @@ def main() -> None:
     if at_token and at_base:
         termine = lade_airtable(tz, at_token, at_base, os.environ.get("AIRTABLE_TABELLE", "Termine"))
         print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen abgesagt")
-        ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle",
-                                      "IS_AFTER({Datum}, DATEADD(TODAY(), -60, 'days'))")
+        ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle", AUSFALL_FORMEL)
         print(f"airtable    {len(ausfaelle)} Ausfälle ({n} API-Abrufe), "
               f"{wende_ausfaelle_an(termine, ausfaelle, cfg)} Termine als abgesagt markiert")
     else:

@@ -79,7 +79,8 @@ verknüpften Termin abgesagt. BFV-Spiele sind ausgenommen, die sagt der BFV selb
 Gibt es dieselbe Mannschaft in mehreren Abteilungen, trifft ein Ausfall ohne Abteilung alle und der
 Build warnt. Ein optionales Feld „Abteilung“ in der Tabelle grenzt ein; der Generator liest es
 bereits, angelegt ist es noch nicht.
-Gelesen werden Ausfälle der letzten 60 Tage und alle künftigen.
+Gelesen werden alle künftigen Ausfälle und die, deren letzter Tag höchstens 60 Tage zurückliegt.
+Sind die Ausfälle nicht lesbar, bricht der Build ab und der bisherige Stand bleibt online.
 
 ### Formulare, Interface, Automationen
 
