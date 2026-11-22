@@ -75,7 +75,8 @@ class Felder(unittest.TestCase):
 
     def test_zielgruppe_aus_mannschaft(self):
         self.assertEqual(lies(Mannschaft="U9")[0].zielgruppe, "Jugend")
-        self.assertEqual(lies(Mannschaft="U9", Zielgruppe="Alle")[0].zielgruppe, "Alle")
+        self.assertEqual(lies(Mannschaft="U9", Zielgruppe="Alle")[0].zielgruppe, "Jugend")
+        self.assertEqual(lies()[0].zielgruppe, "Alle")                 # ohne Mannschaft, Feld leer
 
     def test_interne_felder_werden_nie_gelesen(self):
         t, _ = lies(**{"Notiz intern": "GEHEIM-NOTIZ", "Eingereicht von": "GEHEIM-NAME"})

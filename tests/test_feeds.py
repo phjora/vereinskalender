@@ -67,12 +67,58 @@ class Regeln(unittest.TestCase):
         self.assertTrue(f.passt(termin(kategorie="Training", mannschaft="U9")))
         self.assertFalse(f.passt(termin(kategorie="Training", mannschaft="U17")))
 
-    def test_zielgruppe_wird_aus_mannschaft_abgeleitet(self):
+    def test_zielgruppe_mit_mannschaft_entscheidet_die_mannschaft(self):
         self.assertEqual(build.zielgruppe_fuer("", "U9"), "Jugend")
         self.assertEqual(build.zielgruppe_fuer("", "Bambini"), "Jugend")
-        self.assertEqual(build.zielgruppe_fuer("", "Herren"), "")
-        self.assertEqual(build.zielgruppe_fuer("", ""), "")
-        self.assertEqual(build.zielgruppe_fuer("Erwachsene", "U9"), "Erwachsene")  # Angabe geht vor
+        self.assertEqual(build.zielgruppe_fuer("Alle", "U9"), "Jugend")
+        self.assertEqual(build.zielgruppe_fuer("Erwachsene", "U9"), "Jugend")
+        self.assertEqual(build.zielgruppe_fuer("", "1. Mannschaft"), "Erwachsene")
+        self.assertEqual(build.zielgruppe_fuer("Alle", "1. Mannschaft"), "Erwachsene")
+        # Mannschaft, die nicht als Jugend erkennbar ist: eine ausdrückliche Angabe bleibt stehen
+        self.assertEqual(build.zielgruppe_fuer("Jugend", "Kindergruppe"), "Jugend")
+
+    def test_zielgruppe_ohne_mannschaft_leer_heisst_alle(self):
+        self.assertEqual(build.zielgruppe_fuer("", ""), "Alle")
+        self.assertEqual(build.zielgruppe_fuer("Alle", ""), "Alle")
+        self.assertEqual(build.zielgruppe_fuer("Jugend", ""), "Jugend")
+        self.assertEqual(build.zielgruppe_fuer("Erwachsene", ""), "Erwachsene")
+
+    def test_alle_oder_leer_ohne_mannschaft_zaehlt_als_jugend(self):
+        f = feed(zielgruppen=["Jugend"])
+        self.assertTrue(f.passt(termin(kategorie="Veranstaltung", zielgruppe="Alle")))
+        self.assertTrue(f.passt(termin(kategorie="Veranstaltung", zielgruppe="")))
+        self.assertTrue(f.passt(termin(kategorie="Veranstaltung", zielgruppe="Jugend")))
+        self.assertFalse(f.passt(termin(kategorie="Veranstaltung", zielgruppe="Erwachsene")))
+
+    def test_mit_mannschaft_entscheidet_die_mannschaft(self):
+        f = feed(zielgruppen=["Jugend"])
+        self.assertTrue(f.passt(termin(mannschaft="U9", zielgruppe="Erwachsene")))
+        self.assertFalse(f.passt(termin(mannschaft="1. Mannschaft", zielgruppe="Alle")))
+        self.assertFalse(f.passt(termin(mannschaft="1. Mannschaft", zielgruppe="")))
+
+    def test_gremien_zaehlen_nur_mit_ausdruecklicher_zielgruppe(self):
+        f = feed(zielgruppen=["Jugend"])
+        self.assertFalse(f.passt(termin(kategorie="Gremium", zielgruppe="Alle")))
+        self.assertFalse(f.passt(termin(kategorie="Gremium", zielgruppe="")))
+        self.assertTrue(f.passt(termin(kategorie="Gremium", zielgruppe="Jugend")))
+
+    def test_alle_wird_von_ohne_zielgruppen_nicht_ausgeschlossen(self):
+        f = feed(ohne_zielgruppen=["Erwachsene"])
+        self.assertTrue(f.passt(termin(zielgruppe="Alle")))
+
+    def test_mannschaftskalender_nur_eigene_abteilung(self):
+        f = feed(mannschaften=["U9"], abteilungen=["Fußball"], inkl_hauptverein=True, inkl_abteilung=["Fußball"])
+        self.assertTrue(f.passt(termin(mannschaft="U9")))
+        self.assertFalse(f.passt(termin(mannschaft="U9", abteilung="Handball")))
+        self.assertTrue(f.passt(termin(abteilung="Hauptverein", kategorie="Veranstaltung")))
+
+    def test_pruefung_mannschaftskalender_ohne_abteilung(self):
+        ok = feed(id="a", mannschaften=["U9"], abteilungen=["Fußball"])
+        offen = feed(id="b", mannschaften=["U9"])
+        ohne_mannschaft = feed(id="c")
+        hinweise = build.pruefe_feeds([ok, offen, ohne_mannschaft])
+        self.assertEqual(len(hinweise), 1)
+        self.assertIn("'b'", hinweise[0])
 
     def test_kombi_kalender_nimmt_was_in_einem_der_kalender_steht(self):
         k = build.KombiFeed([feed(id="a", abteilungen=["Judo"]), feed(id="b", abteilungen=["Turnen"])])
@@ -107,9 +153,27 @@ ERWARTET = [
     ("Mitgliederversammlung (öffentliches Gremium)",
      dict(abteilung="Hauptverein", kategorie="Gremium"),
      {"alle", "hauptverein"}),
-    ("Gürtelprüfung Judo",
+    ("Gürtelprüfung Judo (Zielgruppe leer)",
      dict(abteilung="Judo", kategorie="Prüfung"),
+     {"alle", "judo", "jugend"}),
+    ("Judo-Training ohne Mannschaft",
+     dict(abteilung="Judo", kategorie="Training"),
      {"alle", "judo"}),
+    ("Fest der Fußballabteilung (Zielgruppe Alle)",
+     dict(kategorie="Veranstaltung", zielgruppe="Alle"),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1"}),
+    ("Abteilungsversammlung Fußball (öffentliches Gremium)",
+     dict(kategorie="Gremium"),
+     {"alle", "fussball"}),
+    ("Spiel der 1. Mannschaft",
+     dict(kategorie="Spiel", mannschaft="1. Mannschaft"),
+     {"alle", "fussball"}),
+    ("Training Handball U9",
+     dict(abteilung="Handball", kategorie="Training", mannschaft="U9"),
+     {"alle", "handball"}),
+    ("Turnier Handball U9",
+     dict(abteilung="Handball", kategorie="Turnier", mannschaft="U9"),
+     {"alle", "handball", "jugend"}),
     ("Trainersitzung",
      dict(kategorie="Gremium", sichtbarkeit="trainer"),
      {"trainer", "intern", "vorstand"}),
@@ -146,6 +210,13 @@ class EchteKonfiguration(unittest.TestCase):
             with self.subTest(fid):
                 self.assertEqual(self.feeds[fid].zugang, "intern")
                 self.assertNotIn("oeffentlich", self.feeds[fid].sichtbarkeit)
+
+    def test_mannschaftskalender_haben_genau_eine_abteilung(self):
+        self.assertEqual(build.pruefe_feeds(list(self.feeds.values())), [])
+        for fid, f in self.feeds.items():
+            if f.mannschaften:
+                with self.subTest(fid):
+                    self.assertEqual(len(f.abteilungen), 1)
 
     def test_kennungen_bleiben_stabil(self):
         """Feed-IDs sind die Dateinamen der Abos. Wer hier etwas ändert, bricht bestehende Abos."""
