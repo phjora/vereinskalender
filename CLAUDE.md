@@ -73,7 +73,6 @@ Vor dem Start mit weiteren Personen:
 - Im Secret die Kurznamen `u9`/`u17` durch `2018-1`/`2010-1` ersetzen (macht der Betreiber).
 - Prüfen, wie Google Kalender und Outlook `STATUS:CANCELLED` ohne Titel-Präfix darstellen. Auf dem
   iPhone passt es.
-- Alte Kategorie-Option „Jugend“ in Airtable entfernen (abgelöst durch das Feld Zielgruppe).
 
 Technik:
 
@@ -83,12 +82,11 @@ Technik:
 - Lösung für den Saisonwechsel zum Stichtag (Namen hochzählen, BFV-IDs prüfen).
 - Entscheiden, ob Spiele auch aus dem Feed `fussball-jugend` herausfallen sollen.
 - Optionales Häkchen je Ausfall „aus dem Kalender entfernen“ statt als abgesagt zeigen.
-- Tests decken `Feed.passt`, Feiertage und Absagen ab. Noch ohne Tests: Einlesen aus Airtable
-  (`airtable_termin`), BFV-Umwandlung, persönliche Zugänge, Website.
+- Tests decken `Feed.passt`, Feiertage, Absagen und das Einlesen aus Airtable ab. Noch ohne Tests:
+  BFV-Umwandlung, persönliche Zugänge, Website.
 
 Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
 
-- Unbekannter Wert im Feld Sichtbarkeit wird als öffentlich behandelt statt übersprungen.
 - Feiertagsregel rechnet nur 800 Tage ab Serienbeginn.
 - Ausfälle, die vor mehr als 60 Tagen begannen und noch laufen, werden nicht gelesen.
 - Doppelbelegung prüft nur Einzeltermine, keine Serien.

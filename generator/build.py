@@ -320,8 +320,14 @@ def airtable_termin(rec: dict, tz: ZoneInfo) -> Termin | None:
         bis = datetime.combine(date.fromisoformat(f["Wiederholen bis"][:10]),
                                datetime.max.time(), tz).astimezone(timezone.utc)
         regel += f";UNTIL={bis:%Y%m%dT%H%M%SZ}"
-    sicht_roh = (f.get("Sichtbarkeit") or "Öffentlich").lower()
-    sicht = next((v for k, v in SICHT_MAP.items() if sicht_roh.startswith(k)), "oeffentlich")
+    # Im Zweifel nicht veröffentlichen: fehlende oder unbekannte Sichtbarkeit wird nie zu "öffentlich".
+    # Die Warnung nennt bewusst nur die ID, nicht den Titel (das Build-Log ist öffentlich).
+    sicht_roh = (f.get("Sichtbarkeit") or "").strip().lower()
+    sicht = next((v for k, v in SICHT_MAP.items() if sicht_roh.startswith(k)), None)
+    if not sicht:
+        warnung(f"Airtable-Termin {rec['id']}: Sichtbarkeit "
+                + (f"'{f['Sichtbarkeit']}' unbekannt" if sicht_roh else "fehlt") + " – übersprungen")
+        return None
     return Termin(
         id=rec["id"], titel=titel, start=start, ende=ende_w, ganztaegig=ganz,
         wiederholung=regel,
