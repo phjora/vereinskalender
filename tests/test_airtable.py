@@ -118,7 +118,7 @@ class AusfaelleLesen(unittest.TestCase):
     def test_filter_richtet_sich_nach_dem_letzten_ausfalltag(self):
         # Ein langer Ausfall zählt, solange sein letzter Tag ("Bis") noch im Fenster liegt
         self.assertIn("IF({Bis}, {Bis}, {Datum})", build.AUSFALL_FORMEL)
-        self.assertIn("-60", build.AUSFALL_FORMEL)
+        self.assertIn("-200", build.AUSFALL_FORMEL)
 
     def test_nicht_lesbar_bricht_den_build_ab(self):
         # Lieber der alte Stand bleibt online als ein Kalender ohne Absagen

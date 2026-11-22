@@ -213,8 +213,10 @@ def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Ter
     return termine
 
 
-# Ausfälle, deren letzter Tag ("Bis", sonst "Datum") höchstens 60 Tage zurückliegt, und alle künftigen.
-AUSFALL_FORMEL = "IS_AFTER(IF({Bis}, {Bis}, {Datum}), DATEADD(TODAY(), -60, 'days'))"
+# Ausfälle, deren letzter Tag ("Bis", sonst "Datum") höchstens 200 Tage zurückliegt, und alle künftigen.
+# 200 statt 60 Tage: Abgesagte Termine müssen mindestens ein ganzes Quartal rückwirkend als abgesagt im
+# Kalender bleiben, sonst zählen sie bei einer Auswertung aus dem Kalender wieder als gehalten.
+AUSFALL_FORMEL = "IS_AFTER(IF({Bis}, {Bis}, {Datum}), DATEADD(TODAY(), -200, 'days'))"
 
 
 def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[list[dict], int]:
@@ -538,6 +540,9 @@ def externe_termine(feeds: list, tz: ZoneInfo) -> list[Termin]:
                     continue
                 gesehen.add(uid)
                 start = ical_zeit(felder["DTSTART"], tz)
+                # Der BFV liefert ohne anstehende Spiele einen leeren Platzhalter (ohne Titel, Datum 1969).
+                if not ical_text(felder.get("SUMMARY", ":").partition(":")[2]).strip() or start.year < 2000:
+                    continue
                 ende = ical_zeit(felder["DTEND"], tz) if "DTEND" in felder else start + timedelta(hours=2)
                 teile = [x.strip() for x in ical_text(felder.get("SUMMARY", ":Spiel").partition(":")[2]).split(",")]
                 titel = teile[0].replace("-", " – ", 1) if teile[0].count("-") == 1 else teile[0]

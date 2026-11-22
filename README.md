@@ -79,7 +79,8 @@ verknüpften Termin abgesagt. BFV-Spiele sind ausgenommen, die sagt der BFV selb
 Gibt es dieselbe Mannschaft in mehreren Abteilungen, trifft ein Ausfall ohne Abteilung alle und der
 Build warnt. Ein optionales Feld „Abteilung“ in der Tabelle grenzt ein; der Generator liest es
 bereits, angelegt ist es noch nicht.
-Gelesen werden alle künftigen Ausfälle und die, deren letzter Tag höchstens 60 Tage zurückliegt.
+Gelesen werden alle künftigen Ausfälle und die, deren letzter Tag höchstens 200 Tage zurückliegt. So bleiben
+Absagen mindestens ein Quartal rückwirkend im Kalender, auch für Auswertungen aus dem Kalender.
 Sind die Ausfälle nicht lesbar, bricht der Build ab und der bisherige Stand bleibt online.
 
 ### Formulare, Interface, Automationen
@@ -122,6 +123,8 @@ Präfix, weil das iPhone sonst „ABGESAGT: Abgesagt: …“ zeigt. Der Grund st
 **BFV-Spiele.** Die iCal-Links aus der BFV-App („iCal Export“ bei der Mannschaft) stehen in
 `verein.toml` unter `externe_feeds`. Der Generator wandelt sie in normale Termine um (Kategorie
 Spiel, öffentlich, ID `bfv-<uid>`). Ist der BFV nicht erreichbar, läuft der Build trotzdem durch.
+Den leeren Platzhalter, den der BFV ohne anstehende Spiele liefert (kein Titel, Datum 1969), überspringt
+der Generator. Der BFV-Feed enthält nur kommende Spiele; gespielte fallen danach aus dem Kalender.
 
 **Mannschaftskalender.** Die Feed-ID ist Jahrgang plus Nummer, z. B. `2018-1` (U9) und `2010-1`
 (U17). Zum Saisonwechsel werden nur `name` und `mannschaften` hochgezählt, Abo-Links und QR-Codes
