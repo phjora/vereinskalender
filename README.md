@@ -63,7 +63,7 @@ Nur Datensätze mit **Status = Freigegeben** landen im Kalender.
 | Kategorie | Training, Spiel, Gremium, Veranstaltung … |
 | Mannschaft | z. B. U9, U17; leer = abteilungsweit |
 | Zielgruppe | Alle / Jugend / Erwachsene. Leer bei Mannschaften wie „U9“ oder „Bambini“ zählt als Jugend |
-| Sichtbarkeit | Öffentlich / Trainer:innen / Intern / Vorstand |
+| Sichtbarkeit | Öffentlich / Trainer:innen / Intern / Vorstand. Fehlt der Wert oder ist er unbekannt, wird der Termin übersprungen (Warnung im Build-Log) |
 | Beschreibung | landet im Kalender, keine personenbezogenen Daten |
 | Auch an Feiertagen | Ausnahme von der Feiertagsregel |
 | Kalender jetzt aktualisieren | Häkchen löst einen Sofort-Neubau aus |
