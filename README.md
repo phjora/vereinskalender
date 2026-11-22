@@ -62,7 +62,7 @@ Nur Datensätze mit **Status = Freigegeben** landen im Kalender.
 | Abteilung | `Hauptverein` = vereinsweit |
 | Kategorie | Training, Spiel, Gremium, Veranstaltung … |
 | Mannschaft | z. B. U9, U17; leer = abteilungsweit |
-| Zielgruppe | Alle / Jugend / Erwachsene. Leer bei Mannschaften wie „U9“ oder „Bambini“ zählt als Jugend |
+| Zielgruppe | Alle / Jugend / Erwachsene. Mit Mannschaft entscheidet die Mannschaft („U9“, „Bambini“ = Jugend, sonst Erwachsene). Ohne Mannschaft gilt die Angabe; leer heißt Alle |
 | Sichtbarkeit | Öffentlich / Trainer:innen / Intern / Vorstand. Fehlt der Wert oder ist er unbekannt, wird der Termin übersprungen (Warnung im Build-Log) |
 | Beschreibung | landet im Kalender, keine personenbezogenen Daten |
 | Auch an Feiertagen | Ausnahme von der Feiertagsregel |
@@ -72,8 +72,13 @@ Nur Datensätze mit **Status = Freigegeben** landen im Kalender.
 ### Tabelle „Ausfälle“ (`tblI2kDv3CP8A8Sou`)
 
 Felder: Was fällt aus, Datum, Bis (optional, einschließlich), Mannschaft, Termin (Verknüpfung), Grund,
-Abgesagt von. Ein Ausfall trifft alle Vorkommen im Zeitraum, die entweder zum verknüpften Termin
-gehören oder zur genannten Mannschaft. BFV-Spiele sind ausgenommen, die sagt der BFV selbst ab.
+Abgesagt von. Ein Ausfall trifft alle Vorkommen im Zeitraum, die zum verknüpften Termin gehören,
+egal welche Kategorie. Ist nur eine Mannschaft genannt, trifft er deren Trainings (dieselben
+Kategorien wie bei der Feiertagsregel); Turniere, Elternabende und Ähnliches werden nur über den
+verknüpften Termin abgesagt. BFV-Spiele sind ausgenommen, die sagt der BFV selbst ab.
+Gibt es dieselbe Mannschaft in mehreren Abteilungen, trifft ein Ausfall ohne Abteilung alle und der
+Build warnt. Ein optionales Feld „Abteilung“ in der Tabelle grenzt ein; der Generator liest es
+bereits, angelegt ist es noch nicht.
 Gelesen werden Ausfälle der letzten 60 Tage und alle künftigen.
 
 ### Formulare, Interface, Automationen
@@ -102,6 +107,7 @@ welche Stufen er enthält. Öffentliche Feeds enthalten nur `oeffentlich`.
 4. `inkl_abteilung`: abteilungsweite Termine ohne Mannschaft kommen dazu, außer Gremium.
 5. `abteilungen` grenzt ein, `ohne_kategorien` schließt aus.
 6. `kategorien`, `mannschaften`, `zielgruppen`: Sind mehrere gesetzt, reicht ein Treffer.
+   Termine mit Zielgruppe Alle zählen zu jeder Zielgruppe, außer Kategorie Gremium.
 
 **Feiertage.** Serien der Kategorie Training werden an gesetzlichen Feiertagen in Bayern sowie am
 24.12. und 31.12. als abgesagt markiert, nicht gelöscht. Ausnahme: Häkchen „Auch an Feiertagen“.
@@ -118,7 +124,8 @@ Spiel, öffentlich, ID `bfv-<uid>`). Ist der BFV nicht erreichbar, läuft der Bu
 
 **Mannschaftskalender.** Die Feed-ID ist Jahrgang plus Nummer, z. B. `2018-1` (U9) und `2010-1`
 (U17). Zum Saisonwechsel werden nur `name` und `mannschaften` hochgezählt, Abo-Links und QR-Codes
-bleiben gültig. Eine zweite Mannschaft desselben Jahrgangs bekommt `-2`.
+bleiben gültig. Eine zweite Mannschaft desselben Jahrgangs bekommt `-2`. Jeder Mannschaftskalender
+nennt auch seine Abteilung (`abteilungen`), damit die U9 einer anderen Abteilung nicht darin landet.
 
 **Kombi-Kalender.** Für alle öffentlichen Feeds außer `alle` werden sämtliche Zweier- und
 Dreier-Kombinationen erzeugt: `public/kombi/<id>_<id>.ics`, IDs alphabetisch sortiert. Jeder Termin
@@ -128,7 +135,7 @@ weiteren Feed (`[kombi] max` und `ohne` in der Konfiguration).
 **Termin-IDs.** Die UID im Kalender ist die Airtable-Record-ID. Sie darf sich nie ändern, sonst
 entsteht beim Abonnenten ein doppelter Termin.
 
-**Prüfung.** Der Build warnt bei Doppelbelegung eines Orts.
+**Prüfung.** Der Build warnt bei Doppelbelegung eines Orts und bei Mannschaftskalendern ohne Abteilung.
 
 ## Persönliche Zugänge
 
