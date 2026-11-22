@@ -37,8 +37,9 @@ anderen Vereinen dienen, also nichts TSV-Spezifisches in den Code schreiben, son
 ## Ändern, prüfen, ausliefern
 
 1. `git pull`, dann ändern.
-2. `python generator/build.py` lokal laufen lassen (ohne Secrets, mit Beispieldaten). Der Build muss
-   ohne FEHLER durchlaufen; Warnungen lesen.
+2. `python -m unittest discover tests` und `python generator/build.py` lokal laufen lassen (ohne
+   Secrets, mit Beispieldaten). Tests grün, Build ohne FEHLER; Warnungen lesen. Ändert sich eine
+   Regel oder ein Kalender absichtlich, den Test im selben Commit anpassen.
 3. Bei Änderungen an der iCal-Ausgabe eine erzeugte `.ics` ansehen: Zeilenenden CRLF, Zeilen
    gefaltet, `UID` unverändert. Bei Änderungen an der Website `public/index.html` im Browser prüfen,
    auch in schmaler Breite (die meisten kommen übers Handy).
@@ -82,8 +83,20 @@ Technik:
 - Lösung für den Saisonwechsel zum Stichtag (Namen hochzählen, BFV-IDs prüfen).
 - Entscheiden, ob Spiele auch aus dem Feed `fussball-jugend` herausfallen sollen.
 - Optionales Häkchen je Ausfall „aus dem Kalender entfernen“ statt als abgesagt zeigen.
-- Es gibt keine automatischen Tests. Ein kleiner Satz Prüfungen für `Feed.passt`, Feiertage und
-  Absagen würde Umbauten absichern.
+- Tests decken `Feed.passt`, Feiertage und Absagen ab. Noch ohne Tests: Einlesen aus Airtable
+  (`airtable_termin`), BFV-Umwandlung, persönliche Zugänge, Website.
+
+Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
+
+- Unbekannter Wert im Feld Sichtbarkeit wird als öffentlich behandelt statt übersprungen.
+- Feiertagsregel rechnet nur 800 Tage ab Serienbeginn.
+- Ausfälle, die vor mehr als 60 Tagen begannen und noch laufen, werden nicht gelesen.
+- Doppelbelegung prüft nur Einzeltermine, keine Serien.
+- Dauer ohne Ende: 90 Minuten bei Airtable, 60 bei der CSV.
+- Zu kurzer Token oder kaputtes JSON im Secret stoppt den Build.
+- Mannschaftskalender filtern nur nach Mannschaftsname, nicht nach Abteilung.
+- Reste: Kopfkommentar in `build.py`, unbenutztes `ausnahmen`/`EXDATE`, Kategorie „Jugend“ in der
+  Beispiel-CSV.
 
 Größer gedacht:
 

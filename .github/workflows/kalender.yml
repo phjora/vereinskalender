@@ -48,6 +48,9 @@ jobs:
               print(f"::add-mask::{z['token']}")
           PY
 
+      - name: Tests (bei einem Fehler wird nichts veröffentlicht)
+        run: python -m unittest discover tests
+
       - name: Kalender erzeugen
         env:
           VK_BASIS_URL: ${{ steps.pages.outputs.base_url }}
