@@ -82,6 +82,11 @@ Technik:
 - Lösung für den Saisonwechsel zum Stichtag (Namen hochzählen, BFV-IDs prüfen).
 - Entscheiden, ob Spiele auch aus dem Feed `fussball-jugend` herausfallen sollen.
 - Optionales Häkchen je Ausfall „aus dem Kalender entfernen“ statt als abgesagt zeigen.
+- Tabelle „Ausfälle“: optionales Feld „Abteilung“ anlegen, sobald es eine Mannschaft in zwei
+  Abteilungen gibt (der Generator liest es schon).
+- Das Formular „Termin absagen“ kennt nur Mannschaft und Tag und sagt damit nur Trainings ab.
+  Turniere, Elternabende und Ähnliches gehen über die Tabelle oder das Interface (Feld „Termin“).
+  Das Feld nicht ins Formular nehmen: Die Auswahl würde auch Titel interner Termine zeigen.
 - Tests decken `Feed.passt`, Feiertage, Absagen und das Einlesen aus Airtable ab. Noch ohne Tests:
   BFV-Umwandlung, persönliche Zugänge, Website.
 
@@ -91,7 +96,6 @@ Bekannte Abweichungen zwischen README und Code, noch nicht entschieden:
 - Doppelbelegung prüft nur Einzeltermine, keine Serien.
 - Dauer ohne Ende: 90 Minuten bei Airtable, 60 bei der CSV.
 - Zu kurzer Token oder kaputtes JSON im Secret stoppt den Build.
-- Mannschaftskalender filtern nur nach Mannschaftsname, nicht nach Abteilung.
 - Reste: Kopfkommentar in `build.py`, unbenutztes `ausnahmen`/`EXDATE`, Kategorie „Jugend“ in der
   Beispiel-CSV.
 

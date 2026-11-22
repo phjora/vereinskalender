@@ -100,19 +100,27 @@ class Feed:
         if t.kategorie in self.ohne_kategorien:
             return False
         # Kategorien / Mannschaften / Zielgruppen: Sind mehrere angegeben, reicht eine Übereinstimmung.
-        bedingungen = [(self.kategorien, t.kategorie), (self.mannschaften, t.mannschaft),
-                       (self.zielgruppen, t.zielgruppe)]
-        gesetzt = [wert in liste for liste, wert in bedingungen if liste]
+        gesetzt = [wert in liste for liste, wert in ((self.kategorien, t.kategorie),
+                                                     (self.mannschaften, t.mannschaft)) if liste]
+        if self.zielgruppen:
+            # Termine für alle zählen zu jeder Zielgruppe – außer Gremien, die brauchen eine ausdrückliche Angabe.
+            fuer_alle = t.zielgruppe in ("", "Alle") and t.kategorie != "Gremium"
+            gesetzt.append(fuer_alle or t.zielgruppe in self.zielgruppen)
         return any(gesetzt) if gesetzt else True
 
 
 def zielgruppe_fuer(angabe: str, mannschaft: str) -> str:
-    """Leere Zielgruppe: Jugendmannschaften (Bambini, U..) zählen automatisch als Jugend."""
-    if angabe:
-        return angabe
-    if mannschaft == "Bambini" or re.fullmatch(r"U\d+", mannschaft or ""):
-        return "Jugend"
-    return ""
+    """Für wen ein Termin ist: Jugend, Erwachsene oder Alle.
+
+    Mit Mannschaft entscheidet die Mannschaft: Jugendmannschaften (Bambini, U..) sind Jugend,
+    alle anderen Erwachsene – es sei denn, bei so einer Mannschaft ist ausdrücklich Jugend gewählt.
+    Ohne Mannschaft gilt die Angabe; leer heißt Alle.
+    """
+    if mannschaft:
+        if mannschaft == "Bambini" or re.fullmatch(r"U\d+", mannschaft):
+            return "Jugend"
+        return "Jugend" if angabe == "Jugend" else "Erwachsene"
+    return angabe or "Alle"
 
 
 def fehler(msg: str) -> None:
@@ -284,8 +292,14 @@ def wende_feiertage_an(termine: list[Termin], cfg: dict, heute: date | None = No
     return n
 
 
-def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
-    """Markiert Termine an den Ausfall-Tagen als abgesagt. Gibt die Zahl der Treffer zurück."""
+def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict], cfg: dict) -> int:
+    """Markiert Termine an den Ausfall-Tagen als abgesagt. Gibt die Zahl der Treffer zurück.
+
+    Ein verknüpfter Termin wird immer getroffen. Ein Ausfall je Mannschaft trifft nur die
+    Kategorien der Feiertagsregel (Training), keine BFV-Spiele und – wenn im Ausfall eine
+    Abteilung steht – nur diese Abteilung.
+    """
+    kategorien = set(cfg.get("feiertage", {}).get("kategorien", ["Training"]))
     treffer = 0
     for a in ausfaelle:
         f = a.get("fields", {})
@@ -295,12 +309,22 @@ def wende_ausfaelle_an(termine: list[Termin], ausfaelle: list[dict]) -> int:
         bis = date.fromisoformat(f["Bis"][:10]) if f.get("Bis") else von
         verknuepft = set(f.get("Termin") or [])
         mannschaft = (f.get("Mannschaft") or "").strip()
+        abteilung = (f.get("Abteilung") or "").strip()
         grund = (f.get("Grund") or "").strip()
+        abteilungen = set()   # Abteilungen, deren Mannschaft getroffen wurde
         for t in termine:
-            if t.id in verknuepft or (mannschaft and t.mannschaft == mannschaft and not t.id.startswith("bfv-")):
-                for s_ in vorkommen(t, von, bis):
-                    t.absagen[s_.date() if isinstance(s_, datetime) else s_] = grund
-                    treffer += 1
+            ueber_mannschaft = (mannschaft and t.mannschaft == mannschaft and t.kategorie in kategorien
+                                and not t.id.startswith("bfv-") and (not abteilung or t.abteilung == abteilung))
+            if t.id not in verknuepft and not ueber_mannschaft:
+                continue
+            for s_ in vorkommen(t, von, bis):
+                t.absagen[s_.date() if isinstance(s_, datetime) else s_] = grund
+                treffer += 1
+                if t.id not in verknuepft:
+                    abteilungen.add(t.abteilung)
+        if len(abteilungen) > 1:
+            warnung(f"Ausfall {a.get('id', '?')} für '{mannschaft}' am {von:%d.%m.%Y} trifft mehrere Abteilungen "
+                    f"({', '.join(sorted(abteilungen))}) – im Ausfall die Abteilung angeben")
     return treffer
 
 
@@ -568,6 +592,12 @@ def schreibe_ics(pfad: Path, feed: Feed, termine: list[Termin], cfg: dict, stemp
 # --------------------------------------------------------------------------
 # Prüfungen
 # --------------------------------------------------------------------------
+def pruefe_feeds(feeds: list[Feed]) -> list[str]:
+    """Mannschaftskalender brauchen eine Abteilung, sonst landet z. B. eine U9 einer anderen Abteilung darin."""
+    return [f"Kalender '{f.id}' nennt Mannschaften, aber keine Abteilung (abteilungen = [...] in verein.toml ergänzen)"
+            for f in feeds if f.mannschaften and not f.abteilungen]
+
+
 def pruefe_belegung(termine: list[Termin]) -> list[str]:
     """Einfache Doppelbelegungsprüfung je Ort (nur Einzeltermine mit Uhrzeit)."""
     hinweise = []
@@ -727,7 +757,7 @@ def main() -> None:
         ausfaelle, n = airtable_abruf(at_token, at_base, "Ausfälle",
                                       "IS_AFTER({Datum}, DATEADD(TODAY(), -60, 'days'))")
         print(f"airtable    {len(ausfaelle)} Ausfälle ({n} API-Abrufe), "
-              f"{wende_ausfaelle_an(termine, ausfaelle)} Termine als abgesagt markiert")
+              f"{wende_ausfaelle_an(termine, ausfaelle, cfg)} Termine als abgesagt markiert")
     else:
         termine = lade_termine(tz)
         print(f"feiertage   {wende_feiertage_an(termine, cfg)} Trainings an Feiertagen abgesagt")
@@ -792,6 +822,8 @@ def main() -> None:
     schreibe_website(cfg, feeds, termine, basis)
     print("website     public/index.html")
 
+    for h in pruefe_feeds(feeds):
+        warnung(h)
     for h in pruefe_belegung(termine):
         warnung("Doppelbelegung – " + h)
 

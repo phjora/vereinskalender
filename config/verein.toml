@@ -14,6 +14,7 @@ basis_url = ""
 
 # Regelmäßige Termine dieser Kategorien entfallen an gesetzlichen Feiertagen (Bayern)
 # und an den zusätzlichen Tagen. Ausnahme pro Termin: Häkchen "Auch an Feiertagen" in Airtable.
+# Dieselben Kategorien trifft ein Ausfall, der nur eine Mannschaft nennt.
 [feiertage]
 kategorien = ["Training"]
 zusaetzlich = [
@@ -57,8 +58,9 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 # inkl_hauptverein
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
 # ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
-# zielgruppen / ohne_zielgruppen  nach Zielgruppe (Jugend, Erwachsene, Alle) ein- bzw. ausschließen
-# Mannschaften: id = Jahrgang-Nummer (z. B. "2018-1"). Zum Saisonwechsel nur name und
+# zielgruppen / ohne_zielgruppen  nach Zielgruppe (Jugend, Erwachsene, Alle) ein- bzw. ausschließen;
+#                Termine für "Alle" (oder ohne Angabe und ohne Mannschaft) zählen zu jeder Zielgruppe
+# Mannschaften: immer zusammen mit abteilungen angeben. id = Jahrgang-Nummer (z. B. "2018-1"). Zum Saisonwechsel nur name und
 #                mannschaften hochzählen (U9 -> U10) – Abo-Links und QR-Codes bleiben gültig.
 # gruppe         Überschrift, unter der der Kalender auf der Website steht
 # kompakt        true = als schmale Mannschaftszeile statt als Karte
@@ -128,6 +130,7 @@ beschreibung = "Spiele, Trainings und Vereinstermine der U9 in einem Kalender."
 zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U9"]
+abteilungen = ["Fußball"]   # nur diese Abteilung, falls es die Mannschaft auch woanders gibt
 inkl_hauptverein = true
 ohne_zielgruppen = ["Erwachsene"]
 inkl_abteilung = ["Fußball"]   # z. B. Weihnachtsfeier der Fußballjugend
@@ -143,6 +146,7 @@ beschreibung = "Spiele, Trainings und Vereinstermine der U17 in einem Kalender."
 zugang = "oeffentlich"
 sichtbarkeit = ["oeffentlich"]
 mannschaften = ["U17"]
+abteilungen = ["Fußball"]   # nur diese Abteilung, falls es die Mannschaft auch woanders gibt
 inkl_hauptverein = true
 ohne_zielgruppen = ["Erwachsene"]
 inkl_abteilung = ["Fußball"]   # z. B. Weihnachtsfeier der Fußballjugend

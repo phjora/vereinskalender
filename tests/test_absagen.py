@@ -1,4 +1,6 @@
 """Absagen: Ausfälle aus Airtable und ihre Darstellung in der iCal-Datei."""
+import contextlib
+import io
 import tempfile
 import unittest
 from datetime import date
@@ -28,7 +30,7 @@ class Ausfaelle(unittest.TestCase):
     def test_ausfall_fuer_eine_mannschaft(self):
         u17 = termin(id="recU17", mannschaft="U17", **SERIE)
         u9 = termin(id="recU9", mannschaft="U9", **SERIE)
-        n = build.wende_ausfaelle_an([u17, u9], [ausfall("2026-03-10", mannschaft="U17", grund="Platz gesperrt")])
+        n = build.wende_ausfaelle_an([u17, u9], [ausfall("2026-03-10", mannschaft="U17", grund="Platz gesperrt")], CFG)
         self.assertEqual(n, 1)
         self.assertEqual(u17.absagen, {date(2026, 3, 10): "Platz gesperrt"})
         self.assertEqual(u9.absagen, {})
@@ -36,44 +38,85 @@ class Ausfaelle(unittest.TestCase):
     def test_ausfall_fuer_einen_verknuepften_termin(self):
         a = termin(id="recA", mannschaft="U17", **SERIE)
         b = termin(id="recB", mannschaft="U17", **SERIE)
-        build.wende_ausfaelle_an([a, b], [ausfall("2026-03-10", termin_ids=["recA"])])
+        build.wende_ausfaelle_an([a, b], [ausfall("2026-03-10", termin_ids=["recA"])], CFG)
         self.assertEqual(list(a.absagen), [date(2026, 3, 10)])
         self.assertEqual(b.absagen, {})
 
     def test_zeitraum_gilt_einschliesslich_letztem_tag(self):
         t = termin(mannschaft="U17", **SERIE)
-        n = build.wende_ausfaelle_an([t], [ausfall("2026-03-10", bis="2026-03-24", mannschaft="U17")])
+        n = build.wende_ausfaelle_an([t], [ausfall("2026-03-10", bis="2026-03-24", mannschaft="U17")], CFG)
         self.assertEqual(n, 3)
         self.assertEqual(sorted(t.absagen), [date(2026, 3, 10), date(2026, 3, 17), date(2026, 3, 24)])
 
     def test_tag_ohne_termin_trifft_nichts(self):
         t = termin(mannschaft="U17", **SERIE)
-        self.assertEqual(build.wende_ausfaelle_an([t], [ausfall("2026-03-11", mannschaft="U17")]), 0)
+        self.assertEqual(build.wende_ausfaelle_an([t], [ausfall("2026-03-11", mannschaft="U17")], CFG), 0)
         self.assertEqual(t.absagen, {})
 
-    def test_einzeltermin(self):
-        t = termin(id="recE", mannschaft="U9", kategorie="Turnier", start=zeit(2026, 3, 14, 10))
-        build.wende_ausfaelle_an([t], [ausfall("2026-03-14", mannschaft="U9", grund="Krankheit")])
-        self.assertEqual(t.absagen, {date(2026, 3, 14): "Krankheit"})
+    def test_mannschaft_trifft_nur_trainings(self):
+        training = termin(id="recT", mannschaft="U9", start=zeit(2026, 3, 14, 9))
+        turnier = termin(id="recE", mannschaft="U9", kategorie="Turnier", start=zeit(2026, 3, 14, 10))
+        abend = termin(id="recV", mannschaft="U9", kategorie="Veranstaltung", start=zeit(2026, 3, 14, 19))
+        n = build.wende_ausfaelle_an([training, turnier, abend], [ausfall("2026-03-14", mannschaft="U9")], CFG)
+        self.assertEqual(n, 1)
+        self.assertEqual(list(training.absagen), [date(2026, 3, 14)])
+        self.assertEqual(turnier.absagen, {})
+        self.assertEqual(abend.absagen, {})
+
+    def test_kategorien_kommen_aus_der_konfiguration(self):
+        kurs = termin(mannschaft="U9", kategorie="Kurs", **SERIE)
+        cfg = {"feiertage": {"kategorien": ["Training", "Kurs"]}}
+        self.assertEqual(build.wende_ausfaelle_an([kurs], [ausfall("2026-03-10", mannschaft="U9")], cfg), 1)
+
+    def test_verknuepfter_termin_jede_kategorie(self):
+        turnier = termin(id="recE", mannschaft="U9", kategorie="Turnier", start=zeit(2026, 3, 14, 10))
+        build.wende_ausfaelle_an([turnier], [ausfall("2026-03-14", termin_ids=["recE"], grund="Krankheit")], CFG)
+        self.assertEqual(turnier.absagen, {date(2026, 3, 14): "Krankheit"})
+
+    def test_abteilung_im_ausfall_grenzt_ein(self):
+        fussball = termin(id="recF", mannschaft="U9", **SERIE)
+        handball = termin(id="recH", mannschaft="U9", abteilung="Handball", **SERIE)
+        eintrag = ausfall("2026-03-10", mannschaft="U9")
+        eintrag["fields"]["Abteilung"] = "Handball"
+        self.assertEqual(build.wende_ausfaelle_an([fussball, handball], [eintrag], CFG), 1)
+        self.assertEqual(fussball.absagen, {})
+        self.assertEqual(list(handball.absagen), [date(2026, 3, 10)])
+
+    def test_ohne_abteilung_und_eindeutig_keine_warnung(self):
+        log = io.StringIO()
+        with contextlib.redirect_stderr(log):
+            build.wende_ausfaelle_an([termin(mannschaft="U9", **SERIE)], [ausfall("2026-03-10", mannschaft="U9")], CFG)
+        self.assertEqual(log.getvalue(), "")
+
+    def test_ohne_abteilung_und_mehrdeutig_warnt(self):
+        fussball = termin(id="recF", mannschaft="U9", **SERIE)
+        handball = termin(id="recH", mannschaft="U9", abteilung="Handball", **SERIE)
+        log = io.StringIO()
+        with contextlib.redirect_stderr(log):
+            n = build.wende_ausfaelle_an([fussball, handball], [ausfall("2026-03-10", mannschaft="U9")], CFG)
+        self.assertEqual(n, 2)                       # wie bisher: beide, aber nicht mehr stillschweigend
+        self.assertIn("U9", log.getvalue())
+        self.assertIn("Fußball", log.getvalue())
+        self.assertIn("Handball", log.getvalue())
 
     def test_bfv_spiele_sind_ausgenommen(self):
         spiel = termin(id="bfv-123", mannschaft="U17", kategorie="Spiel", start=zeit(2026, 3, 10, 11))
-        self.assertEqual(build.wende_ausfaelle_an([spiel], [ausfall("2026-03-10", mannschaft="U17")]), 0)
+        self.assertEqual(build.wende_ausfaelle_an([spiel], [ausfall("2026-03-10", mannschaft="U17")], CFG), 0)
         self.assertEqual(spiel.absagen, {})
 
     def test_ausfall_ohne_datum_wird_uebersprungen(self):
         t = termin(mannschaft="U17", **SERIE)
-        self.assertEqual(build.wende_ausfaelle_an([t], [{"id": "recX", "fields": {"Mannschaft": "U17"}}]), 0)
+        self.assertEqual(build.wende_ausfaelle_an([t], [{"id": "recX", "fields": {"Mannschaft": "U17"}}], CFG), 0)
 
     def test_ausfall_ohne_mannschaft_und_termin_trifft_nichts(self):
         t = termin(mannschaft="", **SERIE)
-        self.assertEqual(build.wende_ausfaelle_an([t], [ausfall("2026-03-10")]), 0)
+        self.assertEqual(build.wende_ausfaelle_an([t], [ausfall("2026-03-10")], CFG), 0)
 
     def test_ausfall_ersetzt_den_feiertagsgrund(self):
         # Reihenfolge wie im Build: erst Feiertage, dann Ausfälle
         t = termin(mannschaft="U17", start=zeit(2026, 12, 3), wiederholung="FREQ=WEEKLY;UNTIL=20261231T225959Z")
         build.wende_feiertage_an([t], CFG)
-        build.wende_ausfaelle_an([t], [ausfall("2026-12-24", mannschaft="U17", grund="Winterpause")])
+        build.wende_ausfaelle_an([t], [ausfall("2026-12-24", mannschaft="U17", grund="Winterpause")], CFG)
         self.assertEqual(t.absagen[date(2026, 12, 24)], "Winterpause")
         self.assertEqual(t.absagen[date(2026, 12, 31)], "Feiertag (Silvester)")
 
