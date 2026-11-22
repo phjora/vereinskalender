@@ -1,6 +1,6 @@
 """Feiertage: Trainingsserien werden an Feiertagen als abgesagt markiert."""
 import unittest
-from datetime import date
+from datetime import date, timedelta
 
 from hilfen import build, lade_cfg, termin, zeit
 
@@ -77,6 +77,20 @@ class Regel(unittest.TestCase):
     def test_serie_endet_vor_dem_feiertag(self):
         t = termin(start=zeit(2026, 12, 3), wiederholung="FREQ=WEEKLY;UNTIL=20261220T225959Z")
         self.assertEqual(build.wende_feiertage_an([t], CFG), 0)
+
+    def test_serie_die_schon_jahre_laeuft(self):
+        # Donnerstags seit Januar 2020, ohne Enddatum; heute ist der 22.11.2026
+        t = termin(start=zeit(2020, 1, 9), wiederholung="FREQ=WEEKLY")
+        build.wende_feiertage_an([t], CFG, heute=date(2026, 11, 22))
+        self.assertIn(date(2026, 12, 24), t.absagen)      # nächster Feiertag
+        self.assertIn(date(2028, 5, 25), t.absagen)       # Christi Himmelfahrt 2028
+        self.assertIn(date(2020, 12, 24), t.absagen)      # Vergangenes bleibt abgesagt
+        self.assertLessEqual(max(t.absagen), date(2026, 11, 22) + timedelta(days=800))
+
+    def test_serie_die_erst_spaeter_beginnt(self):
+        t = termin(start=zeit(2027, 12, 2), wiederholung="FREQ=WEEKLY")
+        build.wende_feiertage_an([t], CFG, heute=date(2026, 11, 22))
+        self.assertIn(date(2028, 1, 6), t.absagen)        # Heilige Drei Könige, ein Donnerstag
 
     def test_eigener_absagegrund_bleibt_stehen(self):
         t = termin(**DONNERSTAGS)

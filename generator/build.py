@@ -259,15 +259,20 @@ def feiertage(jahr: int, cfg: dict) -> dict:
     return tage
 
 
-def wende_feiertage_an(termine: list[Termin], cfg: dict) -> int:
-    """Regelmäßige Trainings werden an Feiertagen als abgesagt markiert."""
+def wende_feiertage_an(termine: list[Termin], cfg: dict, heute: date | None = None) -> int:
+    """Regelmäßige Trainings werden an Feiertagen als abgesagt markiert.
+
+    Berücksichtigt alles vom Beginn der Serie bis 800 Tage nach heute, damit auch Serien,
+    die schon lange laufen, künftige Feiertage bekommen.
+    """
     kategorien = set(cfg.get("feiertage", {}).get("kategorien", ["Training"]))
+    heute = heute or datetime.now(ZoneInfo(cfg["verein"]["zeitzone"])).date()
     n = 0
     for t in termine:
         if not t.wiederholung or t.auch_feiertags or t.kategorie not in kategorien:
             continue
         erster = t.start.date() if isinstance(t.start, datetime) else t.start
-        bis = erster + timedelta(days=800)
+        bis = max(erster, heute) + timedelta(days=800)
         alle = {}
         for j in range(erster.year, bis.year + 1):
             alle.update(feiertage(j, cfg))
