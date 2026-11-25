@@ -58,6 +58,8 @@ vorschau_tage = 60                   # wie weit die Terminliste auf der Website 
 # inkl_hauptverein
 #                vereinsweite Termine (Abteilung "Hauptverein") zusätzlich aufnehmen
 # ohne_kategorien  diese Kategorien ausschließen (z. B. Training)
+# ohne_mannschaftstermine
+#                true = Termine einzelner Mannschaften ausschließen (Turnier U9, Elternabend U17 ...)
 # zielgruppen / ohne_zielgruppen  nach Zielgruppe (Jugend, Erwachsene, Alle) ein- bzw. ausschließen;
 #                Termine für "Alle" (oder ohne Angabe und ohne Mannschaft) zählen zu jeder Zielgruppe
 # Mannschaften: immer zusammen mit abteilungen angeben. id = Jahrgang-Nummer (z. B. "2018-1"). Zum Saisonwechsel nur name und
@@ -253,17 +255,21 @@ beschreibung = "Termine für Trainer:innen aller Abteilungen, z. B. Trainersitzu
 zugang = "intern"
 sichtbarkeit = ["trainer"]
 
-# Trainer:innen-Termine einer Abteilung: alles mit Sichtbarkeit "Trainer:innen" aus der Abteilung
-# und aus dem Hauptverein, außer was ausdrücklich nur für Erwachsene ist. Für eine weitere
-# Abteilung diesen Block kopieren und id, name und abteilungen anpassen.
+# Fertiger Kalender für die Trainer:innen einer Abteilung (Ausnahme von der Regel oben: er enthält
+# auch Öffentliches und braucht keine Kombination). Drin ist alles Öffentliche und alles mit
+# Sichtbarkeit "Trainer:innen" aus der Abteilung und aus dem Hauptverein – ohne Trainings, Spiele
+# und alle anderen Termine einzelner Mannschaften und ohne das, was ausdrücklich nur für Erwachsene
+# ist. Für eine weitere Abteilung diesen Block kopieren und id, name und abteilungen anpassen.
 [[feed]]
 id = "trainer-fussball-jugend"
 name = "TSV Großhadern – Jugendtrainer:innen Fußball"
-beschreibung = "Termine für die Jugendtrainer:innen der Fußballabteilung: Sitzungen, Fristen, Feiern."
+beschreibung = "Für die Jugendtrainer:innen der Fußballabteilung: Sitzungen, Fristen, Feiern und Vereinstermine – ohne die Termine einzelner Mannschaften."
 zugang = "intern"
-sichtbarkeit = ["trainer"]
+sichtbarkeit = ["oeffentlich", "trainer"]
 abteilungen = ["Fußball", "Hauptverein"]
+ohne_kategorien = ["Training", "Spiel"]
 ohne_zielgruppen = ["Erwachsene"]
+ohne_mannschaftstermine = true
 
 [[feed]]
 id = "intern"
