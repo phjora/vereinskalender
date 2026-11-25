@@ -249,9 +249,21 @@ inkl_hauptverein = true
 [[feed]]
 id = "trainer"
 name = "TSV Großhadern – Trainer:innen"
-beschreibung = "Termine für Trainer:innen, z. B. Trainersitzungen."
+beschreibung = "Termine für Trainer:innen aller Abteilungen, z. B. Trainersitzungen."
 zugang = "intern"
 sichtbarkeit = ["trainer"]
+
+# Trainer:innen-Termine einer Abteilung: alles mit Sichtbarkeit "Trainer:innen" aus der Abteilung
+# und aus dem Hauptverein, außer was ausdrücklich nur für Erwachsene ist. Für eine weitere
+# Abteilung diesen Block kopieren und id, name und abteilungen anpassen.
+[[feed]]
+id = "trainer-fussball-jugend"
+name = "TSV Großhadern – Jugendtrainer:innen Fußball"
+beschreibung = "Termine für die Jugendtrainer:innen der Fußballabteilung: Sitzungen, Fristen, Feiern."
+zugang = "intern"
+sichtbarkeit = ["trainer"]
+abteilungen = ["Fußball", "Hauptverein"]
+ohne_zielgruppen = ["Erwachsene"]
 
 [[feed]]
 id = "intern"

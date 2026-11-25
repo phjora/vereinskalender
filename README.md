@@ -161,6 +161,13 @@ python generator/neuer_zugang.py "Max Muster" intern
 Die Ausgabe in das Secret übernehmen. Sperren = Eintrag löschen, beim nächsten Build ist der Link
 tot. Die Bausteine `trainer`, `intern`, `vorstand` bauen aufeinander auf (siehe Konfiguration).
 
+Für Trainer:innen gibt es zwei Bausteine. `trainer` enthält alle Termine mit Sichtbarkeit
+„Trainer:innen“, egal aus welcher Abteilung. `trainer-fussball-jugend` enthält davon nur die der
+Fußballabteilung und des Hauptvereins, ohne das, was ausdrücklich nur für Erwachsene ist. Beide
+enthalten keine öffentlichen Termine; die kommen über die Kombination dazu, z. B.
+`["trainer-fussball-jugend", "fussball-jugend"]`. Für eine weitere Abteilung den Block in der
+Konfiguration kopieren.
+
 ## Build und Veröffentlichung
 
 Workflow „Kalender bauen und veröffentlichen“, ein Job `bauen`. Auslöser:
@@ -180,8 +187,11 @@ Bekannt:
 
 - GitHub verzögert geplante Läufe bei kostenlosen Konten. In der Praxis läuft der Abgleich etwa
   alle 9 Stunden statt alle 3. Sofort-Neubauten sind nicht betroffen.
-- Schlägt nur der Schritt `deploy-pages` fehl („No artifacts named github-pages“), ist das eine
-  Störung bei GitHub. Lauf neu starten, fertig.
+- Schlägt der Schritt `deploy-pages` fehl („No artifacts named github-pages“), ist das eine Störung
+  bei GitHub. Der Workflow wartet dann eine Minute und versucht es selbst ein zweites Mal. Erst wenn
+  auch das scheitert, gilt der Lauf als fehlgeschlagen; dann den Lauf neu starten.
+- Abrufe bei Airtable werden bei kurzen Störungen (Netz, Serverfehler, Drosselung) bis zu dreimal
+  versucht. Ein falscher Token oder eine falsche Formel bricht sofort ab.
 
 ## Lokal bauen und testen
 
