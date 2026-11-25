@@ -25,7 +25,9 @@ import json
 import os
 import re
 import sys
+import time
 import tomllib
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -186,6 +188,23 @@ WIEDER_MAP = {"wöchentlich": "FREQ=WEEKLY", "alle 2 wochen": "FREQ=WEEKLY;INTER
               "monatlich": "FREQ=MONTHLY"}
 
 
+def airtable_json(req) -> dict:
+    """Ein Abruf bei Airtable mit bis zu drei Versuchen. Kurze Störungen (Netz, Serverfehler, Drosselung)
+    sollen keinen fehlgeschlagenen Lauf auslösen. Fehler, die Warten nicht behebt (falscher Token,
+    falsche Formel), werden sofort weitergereicht."""
+    for versuch in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            if versuch == 2 or (e.code < 500 and e.code != 429):
+                raise
+        except Exception:
+            if versuch == 2:
+                raise
+        time.sleep(10 * (versuch + 1))
+
+
 def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Termin]:
     """Liest nur freigegebene Termine. Eine Anfrage pro 100 Termine."""
     from urllib.parse import quote, urlencode
@@ -197,8 +216,7 @@ def lade_airtable(tz: ZoneInfo, token: str, base: str, tabelle: str) -> list[Ter
         url = f"https://api.airtable.com/v0/{base}/{quote(tabelle)}?{urlencode(q)}"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                antwort = json.loads(r.read())
+            antwort = airtable_json(req)
         except Exception as e:
             fehler(f"Airtable nicht erreichbar: {e}")
         anfragen += 1
@@ -231,8 +249,7 @@ def airtable_abruf(token: str, base: str, tabelle: str, formel: str) -> tuple[li
         url = f"https://api.airtable.com/v0/{base}/{quote(tabelle)}?{urlencode(q)}"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                antwort = json.loads(r.read())
+            antwort = airtable_json(req)
         except Exception as e:
             fehler(f"Airtable-Tabelle '{tabelle}' nicht lesbar: {e}")
         anfragen += 1

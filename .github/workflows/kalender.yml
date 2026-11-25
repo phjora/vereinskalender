@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +63,20 @@ jobs:
         with:
           path: public
 
+      # GitHub findet das eben hochgeladene Paket manchmal nicht sofort ("No artifacts named
+      # github-pages"). Dann eine Minute warten und es ein zweites Mal versuchen, statt den Lauf
+      # scheitern zu lassen. Erst wenn auch das fehlschlägt, gilt der Lauf als fehlgeschlagen.
       - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      - name: Vor dem zweiten Versuch warten
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 60
+
+      - id: deploy2
+        name: Veröffentlichen, zweiter Versuch
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       - name: Auslöse-Issue schließen

@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import unittest
+import urllib.error
 import urllib.parse
 from unittest import mock
 from datetime import date, timedelta
@@ -123,11 +124,54 @@ class AusfaelleLesen(unittest.TestCase):
     def test_nicht_lesbar_bricht_den_build_ab(self):
         # Lieber der alte Stand bleibt online als ein Kalender ohne Absagen
         log = io.StringIO()
-        with mock.patch.object(build.urllib.request, "urlopen", side_effect=OSError("kein Netz")), \
+        with mock.patch.object(build.urllib.request, "urlopen", side_effect=OSError("kein Netz")) as abruf, \
+                mock.patch.object(build.time, "sleep"), \
                 contextlib.redirect_stderr(log), self.assertRaises(SystemExit):
             build.airtable_abruf("token", "appX", "Ausfälle", build.AUSFALL_FORMEL)
+        self.assertEqual(abruf.call_count, 3)          # erst nach drei Versuchen
         self.assertIn("FEHLER", log.getvalue())
         self.assertNotIn("token", log.getvalue())
+
+
+def http_fehler(code):
+    return urllib.error.HTTPError("https://example.invalid", code, "Fehler", None, None)
+
+
+class Wiederholen(unittest.TestCase):
+    """Kurze Störungen bei Airtable sollen keinen fehlgeschlagenen Lauf (und keine Mail) auslösen."""
+
+    def lies(self, *antworten):
+        with mock.patch.object(build.urllib.request, "urlopen", side_effect=list(antworten)) as abruf, \
+                mock.patch.object(build.time, "sleep") as pause:
+            try:
+                ergebnis = build.airtable_json("anfrage")
+            except Exception as e:
+                ergebnis = e
+        return ergebnis, abruf.call_count, pause.call_count
+
+    def test_ohne_stoerung_ein_abruf(self):
+        self.assertEqual(self.lies(Antwort({"records": []})), ({"records": []}, 1, 0))
+
+    def test_netzfehler_wird_wiederholt(self):
+        ergebnis, abrufe, pausen = self.lies(OSError("kein Netz"), Antwort({"records": [1]}))
+        self.assertEqual((ergebnis, abrufe, pausen), ({"records": [1]}, 2, 1))
+
+    def test_serverfehler_und_drosselung_werden_wiederholt(self):
+        ergebnis, abrufe, _ = self.lies(http_fehler(503), http_fehler(429), Antwort({"records": []}))
+        self.assertEqual((ergebnis, abrufe), ({"records": []}, 3))
+
+    def test_nach_drei_versuchen_ist_schluss(self):
+        ergebnis, abrufe, _ = self.lies(OSError("a"), OSError("b"), OSError("c"), Antwort({}))
+        self.assertIsInstance(ergebnis, OSError)
+        self.assertEqual(abrufe, 3)
+
+    def test_falscher_token_oder_falsche_formel_sofort(self):
+        # Das wird durch Warten nicht besser
+        for code in (401, 403, 404, 422):
+            with self.subTest(code):
+                ergebnis, abrufe, pausen = self.lies(http_fehler(code), Antwort({}))
+                self.assertIsInstance(ergebnis, urllib.error.HTTPError)
+                self.assertEqual((abrufe, pausen), (1, 0))
 
 
 if __name__ == "__main__":
