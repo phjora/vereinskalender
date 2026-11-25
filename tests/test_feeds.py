@@ -174,9 +174,24 @@ ERWARTET = [
     ("Turnier Handball U9",
      dict(abteilung="Handball", kategorie="Turnier", mannschaft="U9"),
      {"alle", "handball", "jugend"}),
-    ("Trainersitzung",
+    ("Trainersitzung Fußball (Zielgruppe leer)",
      dict(kategorie="Gremium", sichtbarkeit="trainer"),
+     {"trainer", "trainer-fussball-jugend", "intern", "vorstand"}),
+    ("Sitzung der Jugendtrainer:innen Fußball",
+     dict(kategorie="Gremium", sichtbarkeit="trainer", zielgruppe="Jugend"),
+     {"trainer", "trainer-fussball-jugend", "intern", "vorstand"}),
+    ("Fortbildung für Trainer:innen der Erwachsenen",
+     dict(kategorie="Veranstaltung", sichtbarkeit="trainer", zielgruppe="Erwachsene"),
      {"trainer", "intern", "vorstand"}),
+    ("Trainersitzung Judo",
+     dict(abteilung="Judo", kategorie="Gremium", sichtbarkeit="trainer"),
+     {"trainer", "intern", "vorstand"}),
+    ("Redaktionsschluss Vereinsheft (für alle Trainer:innen im Verein)",
+     dict(abteilung="Hauptverein", kategorie="Sonstiges", sichtbarkeit="trainer"),
+     {"trainer", "trainer-fussball-jugend", "intern", "vorstand"}),
+    ("Vereinsweite Trainersitzung",
+     dict(abteilung="Hauptverein", kategorie="Gremium", sichtbarkeit="trainer"),
+     {"trainer", "trainer-fussball-jugend", "intern", "vorstand"}),
     ("Ausschusssitzung",
      dict(abteilung="Hauptverein", kategorie="Gremium", sichtbarkeit="intern"),
      {"intern", "vorstand"}),
@@ -206,7 +221,7 @@ class EchteKonfiguration(unittest.TestCase):
                     self.assertEqual(f.sichtbarkeit, ["oeffentlich"])
 
     def test_interne_bausteine_enthalten_nichts_oeffentliches(self):
-        for fid in ("trainer", "intern", "vorstand"):
+        for fid in ("trainer", "trainer-fussball-jugend", "intern", "vorstand"):
             with self.subTest(fid):
                 self.assertEqual(self.feeds[fid].zugang, "intern")
                 self.assertNotIn("oeffentlich", self.feeds[fid].sichtbarkeit)
@@ -222,7 +237,7 @@ class EchteKonfiguration(unittest.TestCase):
         """Feed-IDs sind die Dateinamen der Abos. Wer hier etwas ändert, bricht bestehende Abos."""
         self.assertEqual(set(self.feeds), {
             "alle", "hauptverein", "jugend", "fussball-jugend", "2018-1", "2010-1",
-            "trainer", "intern", "vorstand"} | ABTEILUNGSKALENDER)
+            "trainer", "trainer-fussball-jugend", "intern", "vorstand"} | ABTEILUNGSKALENDER)
 
 
 if __name__ == "__main__":
