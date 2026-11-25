@@ -161,12 +161,12 @@ python generator/neuer_zugang.py "Max Muster" intern
 Die Ausgabe in das Secret übernehmen. Sperren = Eintrag löschen, beim nächsten Build ist der Link
 tot. Die Bausteine `trainer`, `intern`, `vorstand` bauen aufeinander auf (siehe Konfiguration).
 
-Für Trainer:innen gibt es zwei Bausteine. `trainer` enthält alle Termine mit Sichtbarkeit
-„Trainer:innen“, egal aus welcher Abteilung. `trainer-fussball-jugend` enthält davon nur die der
-Fußballabteilung und des Hauptvereins, ohne das, was ausdrücklich nur für Erwachsene ist. Beide
-enthalten keine öffentlichen Termine; die kommen über die Kombination dazu, z. B.
-`["trainer-fussball-jugend", "fussball-jugend"]`. Für eine weitere Abteilung den Block in der
-Konfiguration kopieren.
+Für Trainer:innen gibt es zwei Bausteine. `trainer` enthält nur die Termine mit Sichtbarkeit
+„Trainer:innen“, egal aus welcher Abteilung, und wird mit öffentlichen Kalendern kombiniert.
+`trainer-fussball-jugend` ist dagegen ein fertiger Kalender für die Jugendtrainer:innen Fußball: alles
+Öffentliche und alle Trainer:innen-Termine aus Fußball und Hauptverein, ohne einzelne Trainings und
+Spiele und ohne das, was ausdrücklich nur für Erwachsene ist. Er steht allein im Zugang:
+`["trainer-fussball-jugend"]`. Für eine weitere Abteilung den Block in der Konfiguration kopieren.
 
 ## Build und Veröffentlichung
 
