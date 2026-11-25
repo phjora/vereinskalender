@@ -87,11 +87,14 @@ class Feed:
     ohne_zielgruppen: list[str] = field(default_factory=list)
     jahrgang: int = 0
     inkl_abteilung: list[str] = field(default_factory=list)  # abteilungsweite Termine ohne Mannschaft
+    ohne_mannschaftstermine: bool = False                    # Termine einzelner Mannschaften ausschließen
 
     def passt(self, t: Termin) -> bool:
         if t.sichtbarkeit not in self.sichtbarkeit:
             return False
         if t.zielgruppe and t.zielgruppe in self.ohne_zielgruppen:
+            return False
+        if self.ohne_mannschaftstermine and t.mannschaft:
             return False
         if self.inkl_hauptverein and t.abteilung == "Hauptverein" and t.kategorie != "Gremium":
             return True

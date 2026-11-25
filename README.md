@@ -104,7 +104,7 @@ welche Stufen er enthält. Öffentliche Feeds enthalten nur `oeffentlich`.
 **Filter eines Feeds** (`Feed.passt` in `build.py`), in dieser Reihenfolge:
 
 1. Sichtbarkeit muss passen.
-2. `ohne_zielgruppen` schließt aus.
+2. `ohne_zielgruppen` schließt aus, ebenso `ohne_mannschaftstermine` alles mit einer Mannschaft.
 3. `inkl_hauptverein`: vereinsweite Termine kommen dazu, außer Kategorie Gremium.
 4. `inkl_abteilung`: abteilungsweite Termine ohne Mannschaft kommen dazu, außer Gremium.
 5. `abteilungen` grenzt ein, `ohne_kategorien` schließt aus.
@@ -164,8 +164,8 @@ tot. Die Bausteine `trainer`, `intern`, `vorstand` bauen aufeinander auf (siehe 
 Für Trainer:innen gibt es zwei Bausteine. `trainer` enthält nur die Termine mit Sichtbarkeit
 „Trainer:innen“, egal aus welcher Abteilung, und wird mit öffentlichen Kalendern kombiniert.
 `trainer-fussball-jugend` ist dagegen ein fertiger Kalender für die Jugendtrainer:innen Fußball: alles
-Öffentliche und alle Trainer:innen-Termine aus Fußball und Hauptverein, ohne einzelne Trainings und
-Spiele und ohne das, was ausdrücklich nur für Erwachsene ist. Er steht allein im Zugang:
+Öffentliche und alle Trainer:innen-Termine aus Fußball und Hauptverein, ohne Trainings, Spiele und
+alle anderen Termine einzelner Mannschaften und ohne das, was ausdrücklich nur für Erwachsene ist. Er steht allein im Zugang:
 `["trainer-fussball-jugend"]`. Für eine weitere Abteilung den Block in der Konfiguration kopieren.
 
 ## Build und Veröffentlichung
