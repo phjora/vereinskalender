@@ -106,6 +106,16 @@ class Regeln(unittest.TestCase):
         f = feed(ohne_zielgruppen=["Erwachsene"])
         self.assertTrue(f.passt(termin(zielgruppe="Alle")))
 
+    def test_ohne_mannschaftstermine(self):
+        f = feed(ohne_mannschaftstermine=True)
+        self.assertTrue(f.passt(termin(kategorie="Veranstaltung")))
+        self.assertFalse(f.passt(termin(kategorie="Veranstaltung", mannschaft="U9")))
+        self.assertTrue(feed().passt(termin(kategorie="Veranstaltung", mannschaft="U9")))   # Vorgabe: aus
+
+    def test_ohne_mannschaftstermine_geht_vor_hauptverein(self):
+        f = feed(ohne_mannschaftstermine=True, inkl_hauptverein=True)
+        self.assertFalse(f.passt(termin(abteilung="Hauptverein", kategorie="Veranstaltung", mannschaft="U9")))
+
     def test_mannschaftskalender_nur_eigene_abteilung(self):
         f = feed(mannschaften=["U9"], abteilungen=["Fußball"], inkl_hauptverein=True, inkl_abteilung=["Fußball"])
         self.assertTrue(f.passt(termin(mannschaft="U9")))
@@ -140,7 +150,10 @@ ERWARTET = [
      {"alle", "fussball", "fussball-jugend", "2010-1"}),
     ("Turnier U9",
      dict(kategorie="Turnier", mannschaft="U9"),
-     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "trainer-fussball-jugend"}),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1"}),
+    ("Elternabend U17 (Termin einer einzelnen Mannschaft)",
+     dict(kategorie="Veranstaltung", mannschaft="U17"),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2010-1"}),
     ("Feier der Fußballjugend (ohne Mannschaft)",
      dict(kategorie="Veranstaltung", zielgruppe="Jugend"),
      {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1", "trainer-fussball-jugend"}),
@@ -182,6 +195,9 @@ ERWARTET = [
      {"trainer", "trainer-fussball-jugend", "intern", "vorstand"}),
     ("Fortbildung für Trainer:innen der Erwachsenen",
      dict(kategorie="Veranstaltung", sichtbarkeit="trainer", zielgruppe="Erwachsene"),
+     {"trainer", "intern", "vorstand"}),
+    ("Besprechung nur für die Trainer:innen der U9",
+     dict(kategorie="Gremium", sichtbarkeit="trainer", mannschaft="U9"),
      {"trainer", "intern", "vorstand"}),
     ("Trainersitzung Judo",
      dict(abteilung="Judo", kategorie="Gremium", sichtbarkeit="trainer"),
