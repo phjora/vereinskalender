@@ -140,19 +140,19 @@ ERWARTET = [
      {"alle", "fussball", "fussball-jugend", "2010-1"}),
     ("Turnier U9",
      dict(kategorie="Turnier", mannschaft="U9"),
-     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1"}),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "trainer-fussball-jugend"}),
     ("Feier der Fußballjugend (ohne Mannschaft)",
      dict(kategorie="Veranstaltung", zielgruppe="Jugend"),
-     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1"}),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1", "trainer-fussball-jugend"}),
     ("Fußball-Stammtisch für Erwachsene",
      dict(kategorie="Veranstaltung", zielgruppe="Erwachsene"),
      {"alle", "fussball"}),
     ("Vereinsfest",
      dict(abteilung="Hauptverein", kategorie="Veranstaltung"),
-     {"alle", "hauptverein", "jugend", "fussball-jugend", "2018-1", "2010-1"} | ABTEILUNGSKALENDER),
+     {"alle", "hauptverein", "jugend", "fussball-jugend", "2018-1", "2010-1", "trainer-fussball-jugend"} | ABTEILUNGSKALENDER),
     ("Mitgliederversammlung (öffentliches Gremium)",
      dict(abteilung="Hauptverein", kategorie="Gremium"),
-     {"alle", "hauptverein"}),
+     {"alle", "hauptverein", "trainer-fussball-jugend"}),
     ("Gürtelprüfung Judo (Zielgruppe leer)",
      dict(abteilung="Judo", kategorie="Prüfung"),
      {"alle", "judo", "jugend"}),
@@ -161,10 +161,10 @@ ERWARTET = [
      {"alle", "judo"}),
     ("Fest der Fußballabteilung (Zielgruppe Alle)",
      dict(kategorie="Veranstaltung", zielgruppe="Alle"),
-     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1"}),
+     {"alle", "jugend", "fussball", "fussball-jugend", "2018-1", "2010-1", "trainer-fussball-jugend"}),
     ("Abteilungsversammlung Fußball (öffentliches Gremium)",
      dict(kategorie="Gremium"),
-     {"alle", "fussball"}),
+     {"alle", "fussball", "trainer-fussball-jugend"}),
     ("Spiel der 1. Mannschaft",
      dict(kategorie="Spiel", mannschaft="1. Mannschaft"),
      {"alle", "fussball"}),
@@ -221,10 +221,18 @@ class EchteKonfiguration(unittest.TestCase):
                     self.assertEqual(f.sichtbarkeit, ["oeffentlich"])
 
     def test_interne_bausteine_enthalten_nichts_oeffentliches(self):
-        for fid in ("trainer", "trainer-fussball-jugend", "intern", "vorstand"):
+        for fid in ("trainer", "intern", "vorstand"):
             with self.subTest(fid):
                 self.assertEqual(self.feeds[fid].zugang, "intern")
                 self.assertNotIn("oeffentlich", self.feeds[fid].sichtbarkeit)
+
+    def test_jugendtrainer_fussball_ist_ein_fertiger_kalender(self):
+        """Öffentliches und Trainer-Termine in einem, aber nur über einen persönlichen Link."""
+        f = self.feeds["trainer-fussball-jugend"]
+        self.assertEqual(f.zugang, "intern")
+        self.assertEqual(sorted(f.sichtbarkeit), ["oeffentlich", "trainer"])
+        self.assertFalse(f.passt(termin(kategorie="Gremium", sichtbarkeit="intern")))
+        self.assertFalse(f.passt(termin(kategorie="Gremium", sichtbarkeit="vorstand", abteilung="Hauptverein")))
 
     def test_mannschaftskalender_haben_genau_eine_abteilung(self):
         self.assertEqual(build.pruefe_feeds(list(self.feeds.values())), [])
